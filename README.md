@@ -5,4 +5,6 @@ These nodes are implemented in JavaScript to ensure a highly responsive interfac
 This project uses [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) by *Vanilagy*, 
 licensed under the MIT License. See the file `web/js/mp4-muxer.LICENSE` for details.
 
+*DA_Playsound* is based on *PlaySound 🐍* from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)
+
 Created with the assistance of *Google Gemini/Gemma*, *Qwen*, *DeepSeek*.
