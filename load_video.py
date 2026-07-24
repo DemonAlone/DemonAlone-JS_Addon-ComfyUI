@@ -68,7 +68,8 @@ class LoadVideoNode:
     RETURN_NAMES = ("frames", "audio", "fps", "frame_count")
     FUNCTION = "load_video"
     CATEGORY = "video"
-    OUTPUT_NODE = False  # normal node, not output
+    DESCRIPTION = "This node enables direct video loading and preview within ComfyUI without relying on external file paths or disk storage. It features a built-in upload system that accepts common formats like MP4, AVI, and MOV directly via drag-and-drop or the interface button. Upon loading, it automatically extracts video frames into an IMAGE batch while simultaneously retrieving audio streams, FPS, and frame count metadata. "
+    OUTPUT_NODE = False    # normal node, not output
 
     def load_video(self, video):
         video_path = os.path.join(video_input_folder, video)
