@@ -16,6 +16,15 @@ app.registerExtension({
         const presetWidget = node.widgets.find(w => w.name === "preset");
         if (!presetWidget) return;
 
+        // Fixing the minimum node width
+        const MIN_WIDTH = 310;
+        const originalComputeSize = node.computeSize;
+        node.computeSize = function() {
+            const size = originalComputeSize ? originalComputeSize.apply(this, arguments) : [200, 100];
+            size[0] = Math.max(size[0], MIN_WIDTH);
+            return size;
+        };
+
         const updateValueWidget = () => {
             const selectedPresetName = presetWidget.value;
             const config = PRESETS[selectedPresetName] || PRESETS[Object.keys(PRESETS)[0]];
