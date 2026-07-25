@@ -9,4 +9,6 @@ licensed under the MIT License. See the file `web/js/mp4-muxer.LICENSE` for deta
 
 *PresetFloatNode* is based on *Power Primitive* from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
 
+*PresetFloatNode* is based on *Power Primitive* from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
+
 Created with the assistance of *Google Gemini/Gemma*, *Qwen*, *DeepSeek*.

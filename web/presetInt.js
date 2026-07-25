@@ -1,16 +1,13 @@
 import { app } from "../../../scripts/app.js";
-// console.log("[PresetFloatNode] Extension loaded");
 
 app.registerExtension({
-    name: "Comfy.PresetFloatNode",
+    name: "Comfy.PresetIntNode",
     async nodeCreated(node) {
-        if (node.comfyClass !== "PresetFloatNode") return;
+        if (node.comfyClass !== "PresetIntNode") return;
 
         const PRESETS = {
-            "Denoise (0.0 - 1.0, step 0.01)": { min: 0.0, max: 1.0, step: 0.01, precision: 2, default: 0.5 },
-            "CFG Scale (1.0 - 30.0, step 0.5)": { min: 1.0, max: 30.0, step: 0.5, precision: 1, default: 8.0 },
-            "FPS (1 - 120, step 1)": { min: 1.0, max: 120.0, step: 1.0, precision: 0, default: 24.0 },
-            "Strength (0.0 - 2.0, step 0.05)": { min: 0.0, max: 2.0, step: 0.05, precision: 2, default: 1.0 },
+            "Seed (0 - 4294967295, step 1)": { min: 0, max: 0xFFFFFFFFFFFFFFFF, step: 1, precision: 0, default: 0 },
+            "Steps (1 - 10000, step 1)": { min: 1, max: 10000, step: 1, precision: 0, default: 28 },
         };
 
         const presetWidget = node.widgets.find(w => w.name === "preset");
@@ -32,11 +29,10 @@ app.registerExtension({
             let existingValueWidget = node.widgets.find(w => w.name === "value");
             let currentValue = existingValueWidget ? Number(existingValueWidget.value) : config.default;
 
+            // Ensure current value is within bounds before creating new widget
             if (currentValue < config.min) currentValue = config.min;
             if (currentValue > config.max) currentValue = config.max;
-            currentValue = Number(currentValue.toFixed(config.precision));
 
-            // Creates a new widget with hard-coded step, precision, and step2 for the mouse
             const newWidget = node.addWidget("number", "value", currentValue, undefined, {
                 min: config.min,
                 max: config.max,
