@@ -1,7 +1,7 @@
 [project]
 name = "demonalone-js_addon-comfyui"
 description = "These nodes are implemented in JavaScript to ensure a highly responsive interface and enable visual preview without page reloading. They complement the main DemonAlone-nodes-ComfyUI package but can also operate independently."
-version = "1.2.1"
+version = "1.3.0"
 license = {file = "LICENSE"} 
 # classifiers = [
 #     "Environment :: GPU :: NVIDIA CUDA",    # NVIDIA CUDA support

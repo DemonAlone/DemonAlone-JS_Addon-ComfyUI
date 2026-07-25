@@ -1,4 +1,4 @@
-#*PresetFloatNode* is based on *Power Primitive* from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
+#PresetFloatNode is based on Power Primitive from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
 import torch
 import os
 import folder_paths
