@@ -13,7 +13,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "DA_PlaySound": "DA_PlaySound (Beta)",
+    "DA_PlaySound": "DA_PlaySound",
     "LoadVideoNode": "LoadVideoNode (Beta)",
     "PresetFloatNode": "PresetFloatNode (Beta)",
     "PresetIntNode": "PresetIntNode (Beta)",

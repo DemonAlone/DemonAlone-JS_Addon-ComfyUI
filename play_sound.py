@@ -27,7 +27,7 @@ def get_audio_files():
     files = ["default.mp3"]
     if os.path.exists(web_dir):
         for f in os.listdir(web_dir):
-           # Check the extension and exclude the script itself play_sound.js
+            # Check the extension and exclude the script itself play_sound.js
             if f.lower().endswith(valid_extensions) and f not in files:
                 files.append(f)
     return files
@@ -41,6 +41,7 @@ class DA_PlaySound:
                 "volume": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "play_only_when_queue_empty": ("BOOLEAN", {"default": False}),
                 "audio_file": (audio_list, {"default": audio_list[0], "tooltip": "Place your .mp3/.wav/.ogg/.flac files in custom_nodes/demonalone-js_addon-comfyui/web folder"},),
+                "duration": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.1, "tooltip": "Max playback duration in seconds. 0.0 = unlimited"}),
             },
             "optional": {
                 "any_input": ("*", {}),
@@ -51,14 +52,14 @@ class DA_PlaySound:
     RETURN_NAMES = ("output",)
     FUNCTION = "play_sound"
     CATEGORY = "utils"
-    DESCRIPTION = "This utility node triggers audio playback whenever the workflow executes this specific step. You can specify the sound file path from the extension's web folder and adjust the volume level easily. The system includes an option to play sounds only when the generation queue is empty, preventing interruptions during processing. Audio files are cached in browser memory to avoid repeated downloads for subsequent executions."
+    DESCRIPTION = "This utility node triggers audio playback whenever the workflow executes this specific step. Includes a duration limit."
     OUTPUT_NODE = True
 
     @classmethod
     def IS_CHANGED(cls, **kwargs):
         return time.time()
 
-    def play_sound(self, volume, play_only_when_queue_empty, audio_file, any_input=None, **kwargs):
+    def play_sound(self, volume, play_only_when_queue_empty, audio_file, duration, any_input=None, **kwargs):
         should_play = True
         
         if play_only_when_queue_empty:
@@ -81,7 +82,8 @@ class DA_PlaySound:
         if should_play:
             ui_span = {
                 "file": audio_file,
-                "volume": volume
+                "volume": volume,
+                "duration": duration
             }
             ui_data = {"da_play_audio": [ui_span]}
             print(f"[DA_PlaySound] Sending JS playback signal: {audio_file}")
