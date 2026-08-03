@@ -5,22 +5,26 @@ app.registerExtension({
     name: "Comfy.LoopControllerUI",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name === "SimpleLoopController") { 
-            
-            // Abort flag for this specific node instance
-            nodeType.prototype.isAborted = false;
 
-            // Add an ABORT button to the node interface upon creation
+            // Add an ABORT button and initialize instance-level properties upon creation
             const origNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function() {
                 if (origNodeCreated) {
                     origNodeCreated.apply(this, arguments);
                 }
 
+                // initialize the flag strictly for a specific node instance
+                this.isAborted = false;
+
                 const self = this;
-                // Add an interactive button to the node interface
                 this.addWidget("button", "🛑 Abort Loop", "abort", () => {
                     self.isAborted = true;
-                    console.log("[LoopUI] User clicked Abort. Queue will be stopped.");
+                    console.log("[LoopUI] User clicked Abort. Stopping queue...");
+
+                    // Signal the ComfyUI server to interrupt the current execution
+                    if (app.cancelExecution) {
+                        app.cancelExecution();
+                    }
                     
                     // Reset the current step widget to 0 visually
                     const stepWidget = self.widgets.find(w => w.name === "current_step");
@@ -39,9 +43,9 @@ app.registerExtension({
                     origOnExecuted.apply(this, arguments);
                 }
 
-                // If user clicked Abort — halt further executions
+                // If the interrupt flag is triggered for this particular instance
                 if (this.isAborted) {
-                    console.log("[LoopUI] Cycle interrupted by user. New tasks will not be added to the queue.");
+                    console.log("[LoopUI] Cycle interrupted by user. Halting auto-queue.");
                     this.isAborted = false; // Reset flag for future manual runs
                     return;
                 }
@@ -58,7 +62,7 @@ app.registerExtension({
                         }
                     }
 
-                    // If cycle is not finished and no abort signal — run again
+                    // If the cycle is not completed and there was no interruption, we queue the next step
                     if (isFinished === 0 && !this.isAborted) {
                         setTimeout(() => {
                             app.queuePrompt(0, 1);
