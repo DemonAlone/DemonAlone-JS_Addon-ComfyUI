@@ -4,7 +4,7 @@ class SimpleLoopController:
         return {
             "required": {
                 "total": ("INT", {"default": 1, "min": 1, "max": 100, "step": 1}),
-                "current_step": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1}),
+                "current_step": ("INT", {"default": -1, "min": -1, "max": 100, "step": 1}),
             },
             "optional": {
                 "any_input": ("*", {}),
@@ -18,20 +18,23 @@ class SimpleLoopController:
     CATEGORY = "utils/loop"
 
     def control_loop(self, total, current_step, any_input=None):
-        print(f"[LoopController] Step {current_step} of {total}")
+        # If the state is idle (-1), start from step 0.
+        actual_step = 0 if current_step < 0 else current_step
         
-        next_step = current_step + 1
+        print(f"[LoopController] Step {actual_step} of {total}")
+        
+        next_step = actual_step + 1
         
         if next_step < total:
             ui_step = next_step
             is_finished = 0
         else:
-            ui_step = 0
+            ui_step = -1 # Return to rest state when finished
             is_finished = 1
-            print(f"[LoopController] Loop finished. Counter reset to 0.")
+            print(f"[LoopController] Loop finished. Counter reset to idle (-1).")
 
         return {
-            "result": (any_input, current_step),
+            "result": (any_input, actual_step),
             "ui": {
                 "next_step": [ui_step],
                 "is_finished": [is_finished]

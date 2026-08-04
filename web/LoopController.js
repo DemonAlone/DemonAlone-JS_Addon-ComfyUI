@@ -1,39 +1,87 @@
 import { app } from "../../../scripts/app.js";
+import { api } from "../../../scripts/api.js";
 console.log("[LoopControllerUI] Extension loaded");
 
 app.registerExtension({
     name: "Comfy.LoopControllerUI",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (nodeData.name === "SimpleLoopController") { 
+        if (nodeData.name === "SimpleLoopController") {
 
-            // Add an ABORT button and initialize instance-level properties upon creation
+            function syncWidget(node, widget, value) {
+                widget.value = value;
+                if (!node.widgets_values) {
+                    node.widgets_values = node.widgets.map(w => w.value);
+                }
+                const index = node.widgets.indexOf(widget);
+                if (index !== -1) {
+                    node.widgets_values[index] = value;
+                } else {
+                    for (let i = 0; i < node.widgets.length; i++) {
+                        if (node.widgets[i].name === widget.name) {
+                            node.widgets_values[i] = value;
+                            break;
+                        }
+                    }
+                }
+                if (widget.callback) {
+                    widget.callback(value, node);
+                }
+                console.log(`[LoopUI] syncWidget: ${widget.name} = ${value}, widgets_values:`, node.widgets_values);
+            }
+
             const origNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function() {
                 if (origNodeCreated) {
                     origNodeCreated.apply(this, arguments);
                 }
 
-                // initialize the flag strictly for a specific node instance
-                this.isAborted = false;
-
+                this.loopTimeout = null;
                 const self = this;
-                this.addWidget("button", "🛑 Abort Loop", "abort", () => {
-                    self.isAborted = true;
-                    console.log("[LoopUI] User clicked Abort. Stopping queue...");
 
-                    // Signal the ComfyUI server to interrupt the current execution
-                    if (app.cancelExecution) {
-                        app.cancelExecution();
+                this.addWidget("button", "🛑 Abort Loop", "abort", () => {
+                    console.log("[LoopUI] Abort clicked – executing two-step interrupt+clear sequence");
+
+                    if (self.loopTimeout) {
+                        clearTimeout(self.loopTimeout);
+                        self.loopTimeout = null;
                     }
-                    
-                    // Reset the current step widget to 0 visually
-                    const stepWidget = self.widgets.find(w => w.name === "current_step");
-                    if (stepWidget) {
-                        stepWidget.value = 0;
-                        if (self.setDirtyCanvas) {
-                            self.setDirtyCanvas(true, true);
-                        }
-                    }
+
+                    // Step 1: Interrupt current execution (without clearing the queue)
+					// This allows the server to switch to the next step in the queue (if any)
+                    api.fetchApi("/interrupt", { method: "POST" })
+                        .then(() => {
+                            console.log("[LoopUI] Interrupt sent (first)");
+                            // Wait 2000 ms for the server to start switching
+                            setTimeout(() => {
+                                // Step 2: Clear queue
+                                api.fetchApi("/queue", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ clear: true })
+                                })
+                                .then(() => {
+                                    console.log("[LoopUI] Queue cleared");
+                                    // Step 2: Clear queue
+                                    setTimeout(() => {
+                                        api.fetchApi("/interrupt", { method: "POST" })
+                                            .then(() => {
+                                                console.log("[LoopUI] Second interrupt sent");
+                                                 // Step 4: Reset current_step to -1
+                                                const stepWidget = self.widgets.find(w => w.name === "current_step");
+                                                if (stepWidget) {
+                                                    syncWidget(self, stepWidget, -1);
+                                                }
+                                                if (self.setDirtyCanvas) self.setDirtyCanvas(true, true);
+                                                if (app.canvas) app.canvas.setDirty(true, true);
+                                                console.log("[LoopUI] Reset complete, node idle");
+                                            })
+                                            .catch(err => console.error("[LoopUI] Second interrupt error:", err));
+                                    }, 300);
+                                })
+                                .catch(err => console.error("[LoopUI] Queue clear error:", err));
+                            }, 2000);
+                        })
+                        .catch(err => console.error("[LoopUI] First interrupt error:", err));
                 });
             };
 
@@ -43,30 +91,24 @@ app.registerExtension({
                     origOnExecuted.apply(this, arguments);
                 }
 
-                // If the interrupt flag is triggered for this particular instance
-                if (this.isAborted) {
-                    console.log("[LoopUI] Cycle interrupted by user. Halting auto-queue.");
-                    this.isAborted = false; // Reset flag for future manual runs
-                    return;
-                }
+                console.log("[LoopUI] onExecuted message:", message);
 
                 if (message && message.next_step !== undefined) {
                     const nextStep = message.next_step[0];
                     const isFinished = message.is_finished[0];
+                    console.log(`[LoopUI] nextStep=${nextStep}, isFinished=${isFinished}`);
 
                     const widget = this.widgets.find(w => w.name === "current_step");
                     if (widget) {
-                        widget.value = nextStep;
-                        if (this.setDirtyCanvas) {
-                            this.setDirtyCanvas(true, true);
-                        }
+                        syncWidget(this, widget, nextStep);
+                        if (app.canvas) app.canvas.setDirty(true, true);
                     }
 
-                    // If the cycle is not completed and there was no interruption, we queue the next step
-                    if (isFinished === 0 && !this.isAborted) {
-                        setTimeout(() => {
-                            app.queuePrompt(0, 1);
-                        }, 100);
+                    if (isFinished === 0) {
+                        console.log("[LoopUI] Queuing next step immediately");
+                        app.queuePrompt(0, 1);
+                    } else {
+                        console.log("[LoopUI] Loop finished – no more steps");
                     }
                 }
             };
