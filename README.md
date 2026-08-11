@@ -11,6 +11,6 @@ licensed under the MIT License. See the file `web/js/mp4-muxer.LICENSE` for deta
 
 **PresetFloatNode** is based on **Power Primitive** from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
 
-**DA_PromptFormatter** inspired but <u>**not**</u> based  on **Prompt Formatter (Only Text)** [comfyui_prompt_formatter](https://github.com/younyokel/comfyui_prompt_formatter)
+**DA_PromptFormatter** inspired but **not** based  on **Prompt Formatter (Only Text)** [comfyui_prompt_formatter](https://github.com/younyokel/comfyui_prompt_formatter)
 
 Created with the assistance of **Google Gemini/Gemma**, **Qwen**, **DeepSeek**.
