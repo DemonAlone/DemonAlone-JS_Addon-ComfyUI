@@ -20,7 +20,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "PresetFloatNode": "PresetFloatNode (Beta)",
     "PresetIntNode": "PresetIntNode (Beta)",
     "VideoMakerNode": "VideoMakerNode (Beta)",
-    "SimpleLoopController": "Simple Loop Controller (testing)",
+    "SimpleLoopController": "Simple Loop Controller (Beta)",
 }
 
 WEB_DIRECTORY = "./web"
