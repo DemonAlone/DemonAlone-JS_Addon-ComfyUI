@@ -2,13 +2,15 @@ These nodes are implemented in JavaScript to ensure a highly responsive interfac
 
 ## Credits:
 
-This project uses [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) by *Vanilagy*, 
+This project uses [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) by **Vanilagy**, 
 licensed under the MIT License. See the file `web/js/mp4-muxer.LICENSE` for details.
 
-*DA_Playsound* is based on *PlaySound 🐍* from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)
+**DA_Playsound** is based on **PlaySound 🐍** from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)
 
-*PresetFloatNode* is based on *Power Primitive* from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
+**PresetFloatNode** is based on **Power Primitive** from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
 
-*PresetFloatNode* is based on *Power Primitive* from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
+**PresetFloatNode** is based on **Power Primitive** from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
 
-Created with the assistance of *Google Gemini/Gemma*, *Qwen*, *DeepSeek*.
+**DA_PromptFormatter** inspired but <u>**not**</u> based  on **Prompt Formatter (Only Text)** [comfyui_prompt_formatter](https://github.com/younyokel/comfyui_prompt_formatter)
+
+Created with the assistance of **Google Gemini/Gemma**, **Qwen**, **DeepSeek**.
