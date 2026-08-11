@@ -51,7 +51,7 @@ app.registerExtension({
         controlsDiv.style.alignItems = "flex-end";
         controlsDiv.style.gap = "4px";
         controlsDiv.style.zIndex = "10";
-        controlsDiv.style.pointerEvents = "none"; // не мешаем кликам по видео
+        controlsDiv.style.pointerEvents = "none"; // don’t interfere with clicks on videos
         container.appendChild(controlsDiv);
 
         const uploadBtn = document.createElement("button");
@@ -79,6 +79,31 @@ app.registerExtension({
         uploadStatus.style.display = "none";
         controlsDiv.appendChild(uploadStatus);
 
+		
+		// Create a block to display the resolution
+        const resolutionInfo = document.createElement("div");
+        resolutionInfo.style.color = "#fff";
+        resolutionInfo.style.fontSize = "12px";
+        resolutionInfo.style.backgroundColor = "rgba(0,0,0,0.5)";
+        resolutionInfo.style.padding = "2px 6px";
+        resolutionInfo.style.borderRadius = "3px";
+		resolutionInfo.style.display = "none"; // Initially hidden  
+		resolutionInfo.style.pointerEvents = "none"; // To avoid blocking clicks  
+		resolutionInfo.style.marginTop = "4px"; // Small margin from the button  
+		controlsDiv.appendChild(resolutionInfo); // Append to controls container
+
+
+        // Metadata loading handler (attach once)
+        videoEl.addEventListener('loadedmetadata', function() {
+            const w = this.videoWidth;
+            const h = this.videoHeight;
+            if (w && h) {
+                resolutionInfo.textContent = `${w}×${h}`;
+            } else {
+                resolutionInfo.textContent = 'Unknown resolution';
+            }
+            resolutionInfo.style.display = "block";
+        });
 		// Handling file selection via button
         fileInput.addEventListener("change", async (e) => {
             const file = e.target.files[0];
@@ -176,10 +201,13 @@ app.registerExtension({
                     videoEl.load();
                     statusDiv.style.display = "none";
                     videoEl.style.display = "block";
+					resolutionInfo.style.display = "block"; // Show infoDiv, but text will update after metadata is loaded
+                    resolutionInfo.textContent = "Loading...";
                 } else {
                     videoEl.style.display = "none";
                     statusDiv.style.display = "block";
                     statusDiv.textContent = "No video selected";
+					resolutionInfo.style.display = "none"; // Hide when there is no video
                 }
             };
             const originalCallback = videoWidget.callback;
