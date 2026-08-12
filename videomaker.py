@@ -40,7 +40,7 @@ async def get_frames(request):
     if sid not in _frame_cache:
         return web.Response(status=404)
     
-    meta = _frame_cache[sid]
+    meta = _frame_cache.pop(sid)
     frames_data = meta["frames"]
     total_frames = len(frames_data)
     

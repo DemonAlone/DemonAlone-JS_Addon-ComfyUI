@@ -144,10 +144,10 @@ async function triggerVideoGeneration(node, sessionId) {
         return;
     }
     isProcessing = true;
-    try {
+    
         const statusDiv = node.statusDiv;
         const videoEl = node.videoEl;
-
+	try {
         // 1. Metadata
         debugLog("VideoMaker", "Fetching metadata...");
         const meta = await (await fetch(`/customvideo/meta?id=${sessionId}`)).json();
@@ -231,10 +231,10 @@ async function encodeVideo(frameBlobs, width, height, fps, audioArrayBuffer, tri
     });
     
     encoder.configure({
-        codec: "avc1.42001f",
+        codec: "avc1.64002a", // High Profile, Level 4.2 (supports resolutions more then 1080p)
         width,
         height,
-        bitrate: 6_000_000,
+        bitrate: 8_000_000,
         framerate: fps
     });
 

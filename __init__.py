@@ -18,10 +18,10 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "DA_PlaySound": "DA_PlaySound",
-    "LoadVideoNode": "LoadVideoNode [Beta]",
-    "PresetFloatNode": "PresetFloatNode [BETA]",
-    "PresetIntNode": "PresetIntNode [BETA]",
-    "VideoMakerNode": "VideoMakerNode [BETA]",
+    "LoadVideoNode": "Load Video [BETA]",
+    "PresetFloatNode": "Preset Float [BETA]",
+    "PresetIntNode": "Preset Int [BETA]",
+    "VideoMakerNode": "Video Maker [BETA]",
     "SimpleLoopController": "Simple Loop Controller [BETA]",
     "DA_PromptFormatter": "Prompt Formatter [BETA]",
 }
