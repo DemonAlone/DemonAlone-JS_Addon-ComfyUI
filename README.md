@@ -7,9 +7,7 @@ licensed under the MIT License. See the file `web/js/mp4-muxer.LICENSE` for deta
 
 * **DA_Playsound** is based on **PlaySound 🐍** from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)
 
-* **PresetFloatNode** is based on **Power Primitive** from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
-
-* **PresetFloatNode** is based on **Power Primitive** from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
+* **PresetFloatNode**  and **PresetIntNode** are based on **Power Primitive** from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy)
 
 * **DA_PromptFormatter** inspired but **not** based  on **Prompt Formatter (Only Text)** [comfyui_prompt_formatter](https://github.com/younyokel/comfyui_prompt_formatter)
 
