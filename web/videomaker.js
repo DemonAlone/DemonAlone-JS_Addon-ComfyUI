@@ -95,16 +95,6 @@ app.registerExtension({
         statusDiv.textContent = "Ready";
         container.appendChild(statusDiv);
 
-        const resizeHandle = document.createElement("div");
-        resizeHandle.style.position = "absolute";
-        resizeHandle.style.right = "0";
-        resizeHandle.style.bottom = "0";
-        resizeHandle.style.width = "16px";
-        resizeHandle.style.height = "16px";
-        resizeHandle.style.cursor = "se-resize";
-        resizeHandle.style.backgroundColor = "rgba(255,255,255,0.2)";
-        resizeHandle.style.zIndex = "20";
-        container.appendChild(resizeHandle);
 
         node.addDOMWidget("video_preview", "video_widget", container);
         node.size = [360, 280];
@@ -112,28 +102,6 @@ app.registerExtension({
         node.videoEl = videoEl;
         node.statusDiv = statusDiv;
 
-        resizeHandle.addEventListener("pointerdown", (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const startW = node.size[0];
-            const startH = node.size[1];
-            
-            const onMove = (ev) => {
-                const w = Math.max(250, startW + ev.clientX - startX);
-                const h = Math.max(200, startH + ev.clientY - startY);
-                node.size = [w, h];
-                node.setSize(node.size);
-                app.graph.setDirtyCanvas(true, true);
-            };
-            const onUp = () => {
-                window.removeEventListener("pointermove", onMove);
-                window.removeEventListener("pointerup", onUp);
-            };
-            window.addEventListener("pointermove", onMove);
-            window.addEventListener("pointerup", onUp);
-        });
     }
 });
 
