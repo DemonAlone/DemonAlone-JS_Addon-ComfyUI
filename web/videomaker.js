@@ -112,9 +112,21 @@ async function triggerVideoGeneration(node, sessionId) {
         return;
     }
     isProcessing = true;
-    
-        const statusDiv = node.statusDiv;
-        const videoEl = node.videoEl;
+
+	const statusDiv = node.statusDiv;
+    const videoEl = node.videoEl;
+
+    // ---- Reset the widget before starting ----
+    if (statusDiv) {
+        statusDiv.style.display = "block";
+        statusDiv.textContent = "Preparing...";
+    }
+    if (videoEl) {
+        videoEl.style.display = "none";
+        videoEl.src = "";       // clear old source
+        videoEl.load();         // reset player state
+    }
+
 	try {
         // 1. Metadata
         debugLog("VideoMaker", "Fetching metadata...");
