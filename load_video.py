@@ -29,6 +29,49 @@ async def upload_video(request):
         shutil.copyfileobj(file.file, f)
     
     return web.json_response({"name": safe_filename})
+
+
+# Endpoint for instant metadata retrieval without frame decoding
+@PromptServer.instance.routes.get("/get_video_metadata")
+async def get_video_metadata(request):
+    filename = request.query.get("file")
+    if not filename:
+        return web.Response(status=400, text="Missing file parameter")
+    
+    safe_path = os.path.abspath(os.path.join(video_input_folder, filename))
+    if not safe_path.startswith(os.path.abspath(video_input_folder)):
+        return web.Response(status=403, text="Forbidden")
+    if not os.path.exists(safe_path):
+        return web.Response(status=404, text="File not found")
+
+    try:
+        container = av.open(safe_path)
+        video_stream = next((s for s in container.streams if s.type == 'video'), None)
+        
+        if video_stream is None:
+            container.close()
+            return web.json_response({"error": "No video stream found"}, status=400)
+
+        # Accurate FPS from container metadata
+        fps = float(video_stream.average_rate) if video_stream.average_rate else 25.0
+        
+        # Exact number of frames from titles
+        frame_count = video_stream.frames
+        if not frame_count or frame_count <= 0:
+            # # For WebM, compute frame count by duration of the stream
+            if video_stream.duration and video_stream.time_base:
+                frame_count = int(float(video_stream.duration * video_stream.time_base) * fps)
+            elif container.duration:
+                # Total container duration in microseconds (AV_TIME_BASE = 1000000)
+                frame_count = int((container.duration / 1000000.0) * fps)
+            else:
+                frame_count = 0
+
+        container.close()
+        return web.json_response({"fps": fps, "frame_count": frame_count})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
 # Endpoint for serving video files (preview)
 @PromptServer.instance.routes.get("/inputvideo")
 async def serve_input_video(request):
@@ -68,7 +111,7 @@ class LoadVideoNode:
     RETURN_NAMES = ("frames", "audio", "fps", "frame_count")
     FUNCTION = "load_video"
     CATEGORY = "video"
-    DESCRIPTION = "This node enables direct video loading and preview within ComfyUI without relying on external file paths or disk storage. It features a built-in upload system that accepts common formats like MP4, AVI, and MOV directly via drag-and-drop or the interface button. Upon loading, it automatically extracts video frames into an IMAGE batch while simultaneously retrieving audio streams, FPS, and frame count metadata. "
+    DESCRIPTION = "Directly load videos into ComfyUI via drag-and-drop or button upload (MP4, AVI, MOV, MKV, WebM). Outputs frames as an IMAGE batch and extracts audio, FPS, and frame count metadata. Features a built-in preview player with real-time display of resolution, FPS, and total frame count."
     OUTPUT_NODE = False    # normal node, not output
 
     def load_video(self, video):

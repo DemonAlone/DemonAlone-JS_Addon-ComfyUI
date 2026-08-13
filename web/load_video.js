@@ -1,6 +1,8 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
+console.log("[Load video] Extension loaded");
+
 app.registerExtension({
     name: "LoadVideo",
     async nodeCreated(node) {
@@ -91,11 +93,36 @@ app.registerExtension({
 		resolutionInfo.style.pointerEvents = "none"; // To avoid blocking clicks  
 		resolutionInfo.style.marginTop = "4px"; // Small margin from the button  
 		controlsDiv.appendChild(resolutionInfo); // Append to controls container
+		
+		// Create a block to display the FPS
+        const fpsInfo = document.createElement("div");
+        fpsInfo.style.color = "#fff";
+        fpsInfo.style.fontSize = "12px";
+        fpsInfo.style.backgroundColor = "rgba(0,0,0,0.5)";
+        fpsInfo.style.padding = "2px 6px";
+        fpsInfo.style.borderRadius = "3px";
+        fpsInfo.style.display = "none";
+        fpsInfo.style.pointerEvents = "none";
+        fpsInfo.style.marginTop = "4px";
+        controlsDiv.appendChild(fpsInfo);
+		
+		// Create a block to display the Frame Count
+        const frameCountInfo = document.createElement("div");
+        frameCountInfo.style.color = "#fff";
+        frameCountInfo.style.fontSize = "12px";
+        frameCountInfo.style.backgroundColor = "rgba(0,0,0,0.5)";
+        frameCountInfo.style.padding = "2px 6px";
+        frameCountInfo.style.borderRadius = "3px";
+        frameCountInfo.style.display = "none";
+        frameCountInfo.style.pointerEvents = "none";
+        frameCountInfo.style.marginTop = "4px";
+        controlsDiv.appendChild(frameCountInfo);
 
 
         // Metadata loading handler (attach once)
         videoEl.addEventListener('loadedmetadata', function() {
-            const w = this.videoWidth;
+            // Resolution
+			const w = this.videoWidth;
             const h = this.videoHeight;
             if (w && h) {
                 resolutionInfo.textContent = `${w}×${h}`;
@@ -103,7 +130,8 @@ app.registerExtension({
                 resolutionInfo.textContent = 'Unknown resolution';
             }
             resolutionInfo.style.display = "block";
-        });
+        });		
+		
 		// Handling file selection via button
         fileInput.addEventListener("change", async (e) => {
             const file = e.target.files[0];
@@ -193,7 +221,7 @@ app.registerExtension({
         const videoWidget = node.widgets?.find(w => w.name === "video");
         if (videoWidget) {
             node.videoWidget = videoWidget;
-            const updateVideo = () => {
+            const updateVideo = async () => {
                 const filename = videoWidget.value;
                 if (filename && filename !== "No video files found") {
                     const url = `/inputvideo?file=${encodeURIComponent(filename)}`;
@@ -203,11 +231,33 @@ app.registerExtension({
                     videoEl.style.display = "block";
 					resolutionInfo.style.display = "block"; // Show infoDiv, but text will update after metadata is loaded
                     resolutionInfo.textContent = "Loading...";
+					fpsInfo.textContent = "Loading...";
+                    frameCountInfo.textContent = "Loading...";
+                    fpsInfo.style.display = "block";
+                    frameCountInfo.style.display = "block";
+					
+					// Requesting exact data from the backend in real time
+                    try {
+                        const metaResp = await fetch(`/get_video_metadata?file=${encodeURIComponent(filename)}`);
+                        if (metaResp.ok) {
+                            const meta = await metaResp.json();
+                            fpsInfo.textContent = `${meta.fps.toFixed(2)} fps`;
+                            frameCountInfo.textContent = `${meta.frame_count} frames`;
+                        } else {
+                            fpsInfo.textContent = "Error fps";
+                            frameCountInfo.textContent = "Error frames";
+                        }
+                    } catch (err) {
+                        console.error("Failed to fetch video metadata:", err);
+					}
+					
                 } else {
                     videoEl.style.display = "none";
                     statusDiv.style.display = "block";
                     statusDiv.textContent = "No video selected";
 					resolutionInfo.style.display = "none"; // Hide when there is no video
+					fpsInfo.style.display = "none";
+                    frameCountInfo.style.display = "none";
                 }
             };
             const originalCallback = videoWidget.callback;
