@@ -116,7 +116,7 @@ class VideoMakerNode:
         return {
             "required": {
                 "images": ("IMAGE",),
-                "fps": ("FLOAT", {"default": 24.0, "min": 1.0, "max": 120.0, "step": 0.01}),
+                "fps": ("FLOAT", {"default": 24.0, "min": 1.0, "max": 60.0, "step": 0.01}),
                 "trim_audio": ("BOOLEAN", {"default": True, "label": "Trim audio to video length"})
             },
             "optional": {

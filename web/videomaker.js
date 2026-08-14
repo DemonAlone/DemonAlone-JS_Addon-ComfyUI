@@ -203,23 +203,39 @@ async function triggerVideoGeneration(node, sessionId) {
 
 async function encodeVideo(frameBlobs, width, height, fps, audioArrayBuffer, trimAudio = false) {
     debugLog("VideoMaker", `Encoding started: trim=${trimAudio}, frames=${frameBlobs.length}, fps=${fps}`);
-    
     const videoChunks = [];
     const encoder = new VideoEncoder({
         output: (chunk, meta) => videoChunks.push({ chunk, meta }),
         error: e => console.error("VideoEncoder error:", e)
     });
-    
-    encoder.configure({
-        codec: "avc1.64002a", // High Profile, Level 4.2 (supports resolutions more then 1080p)
-        width,
-        height,
-        bitrate: 8_000_000,
-        framerate: fps
-    });
+	
+	//Reducing to even values
+	const encWidth = width % 2 === 0 ? width : width - 1;
+	const encHeight = height % 2 === 0 ? height : height - 1;
+
+	if (encWidth !== width || encHeight !== height) {
+		console.warn(`[VideoMaker] Resolution adjusted from ${width}x${height} to ${encWidth}x${encHeight} for codec compatibility.`);
+	}
+
+	//  Configuring the encoder with the correct even sizes
+	try {
+		encoder.configure({
+			codec: "avc1.640033", // Level 5.1
+			width: encWidth,
+			height: encHeight,
+			bitrate: 60_000_000,
+			framerate: fps
+		});
+	} catch (err) {
+		console.error('[VideoMaker] Failed to configure encoder:', err);
+		throw err;
+	}
 
     for (let i = 0; i < frameBlobs.length; i++) {
-        const bitmap = await createImageBitmap(frameBlobs[i]);
+        const bitmap = await createImageBitmap(frameBlobs[i], {
+			resizeWidth: encWidth,
+			resizeHeight: encHeight
+		});
         const frame = new VideoFrame(bitmap, { timestamp: Math.round((i / fps) * 1_000_000) });
         encoder.encode(frame, { keyFrame: i % 30 === 0 });
         frame.close();
