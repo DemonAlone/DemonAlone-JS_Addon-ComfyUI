@@ -104,17 +104,23 @@ class LoadVideoNode:
         return {
             "required": {
                 "video": (files,),
+                "max_frames": ("INT", {"default": 0, "min": 0, "max": 1000000, "step": 1, "tooltip": "0 = all"}),
             }
         }
 
     RETURN_TYPES = ("IMAGE", "AUDIO", "FLOAT", "INT")
-    RETURN_NAMES = ("frames", "audio", "fps", "frame_count")
+    RETURN_NAMES = ("frames", "audio", "fps", "frame_count")  # frame_count is now the actual number of frames loaded
     FUNCTION = "load_video"
     CATEGORY = "video"
-    DESCRIPTION = "Directly load videos into ComfyUI via drag-and-drop or button upload (MP4, AVI, MOV, MKV, WebM). Outputs frames as an IMAGE batch and extracts audio, FPS, and frame count metadata. Features a built-in preview player with real-time display of resolution, FPS, and total frame count."
+    DESCRIPTION = "Directly load videos into ComfyUI via drag-and-drop or button upload (MP4, AVI, MOV, MKV, WebM). Outputs frames as an IMAGE batch and extracts audio, FPS, and frame count metadata. The 'max_frames' parameter limits the number of frames loaded (0 = all). The output 'frame_count' reflects the actual number of frames loaded (after cropping). Features a built-in preview player with real-time display of resolution, FPS, and total frame count."
     OUTPUT_NODE = False    # normal node, not output
-
-    def load_video(self, video):
+    OUTPUT_TOOLTIPS = (
+        "Batch of video frames as images (torch.Tensor) [N, H, W, C]",
+        "Dictionary with 'waveform' and 'sample_rate', or None if no audio",
+        "Frames per second of the video (float)",
+        "Actual number of frames loaded, respecting the 'max_frames' limit"
+    )
+    def load_video(self, video, max_frames):
         video_path = os.path.join(video_input_folder, video)
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -132,12 +138,21 @@ class LoadVideoNode:
         sample_rate = audio_stream.sample_rate if audio_stream else None
         audio_channels = audio_stream.channels if audio_stream else None
 
+        frame_count_loaded = 0
+        # Decode until we reach max_frames (if max_frames != 0)
         for packet in container.demux():
             if packet.stream.type == 'video':
                 for frame in packet.decode():
                     img = frame.to_image()
                     img_np = np.array(img).astype(np.float32) / 255.0
                     frames.append(img_np)
+                    frame_count_loaded += 1
+                    # If limit reached, break inner loop
+                    if max_frames != 0 and frame_count_loaded >= max_frames:
+                        break
+                # If limit reached, break outer loop (demux)
+                if max_frames != 0 and frame_count_loaded >= max_frames:
+                    break
             elif packet.stream.type == 'audio' and audio_stream is not None:
                 for frame in packet.decode():
                     audio_data = frame.to_ndarray()
@@ -163,4 +178,4 @@ class LoadVideoNode:
                 "sample_rate": sample_rate,
             }
 
-        return (frames_tensor, audio_dict, original_fps, len(frames))
+        return (frames_tensor, audio_dict, original_fps, frame_count_loaded)
