@@ -28,6 +28,12 @@ function formatPrompt(text) {
 
     // 4. Add a space after comma/period if followed by a letter or digit (excluding decimals)
     result = result.replace(/([.,])([^\s\d,.])/g, (match, punct, next) => punct + " " + next);
+	
+	// 5. Remove spaces immediately after opening parentheses/brackets and before closing
+    result = result.replace(/\(\s+/g, '(');
+    result = result.replace(/\s+\)/g, ')');
+    result = result.replace(/\[\s+/g, '[');
+    result = result.replace(/\s+\]/g, ']');
 
     return result;
 }

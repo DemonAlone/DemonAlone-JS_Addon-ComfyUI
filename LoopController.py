@@ -14,7 +14,11 @@ class SimpleLoopController:
     RETURN_TYPES = ("*", "INT")
     RETURN_NAMES = ("output", "current_step")
     FUNCTION = "control_loop"
-    DESCRIPTION = "This node automates sequential task execution in ComfyUI by managing a configurable step counter and automatically queuing subsequent prompts until completion. It includes a dedicated abort button to safely interrupt the loop and reset progress when needed. The controller handles all state tracking and UI updates, enabling reliable batch processing without manual intervention."
+    DESCRIPTION = (
+            "This node automates sequential task execution in ComfyUI by managing a configurable step counter and automatically queuing subsequent prompts until completion."
+            "It includes a dedicated abort button to safely interrupt the loop and reset progress when needed."
+            "The controller handles all state tracking and UI updates, enabling reliable batch processing without manual intervention."
+    )
     CATEGORY = "utils/loop"
 
     def control_loop(self, total, current_step, any_input=None):

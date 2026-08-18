@@ -14,7 +14,6 @@ import time
 import datetime
 import folder_paths
 
-
 _frame_cache = {}
 _audio_cache = {}
 
@@ -131,9 +130,12 @@ class VideoMakerNode:
     RETURN_NAMES = ("last_frame",)
     FUNCTION = "make_video"
     CATEGORY = "video"
-    DESCRIPTION = "This node generates MP4 videos from image batches with optional audio support, saving the result directly to your output folder. Its unique preview scaling automatically fits the video frame to the node's canvas size rather than stretching it, ensuring better workflow control. You can also trim audio to match video length, but be aware that the audio bitrate is capped at 192K."
+    DESCRIPTION = (
+            "This node generates MP4 videos from image batches with optional audio support, saving the result directly to your output folder."
+            "Its unique preview scaling automatically fits the video frame to the node's canvas size rather than stretching it, ensuring better workflow control."
+            "You can also trim audio to match video length, but be aware that the audio bitrate is capped at 192K."
+    )
     OUTPUT_NODE = True
-
 
     def make_video(self, images, fps, trim_audio, audio=None, filename="video", use_date_mask=False, custom_date_format="yyyy-mm-dd"):
         session_id = str(uuid.uuid4())

@@ -112,7 +112,12 @@ class LoadVideoNode:
     RETURN_NAMES = ("frames", "audio", "fps", "frame_count")  # frame_count is now the actual number of frames loaded
     FUNCTION = "load_video"
     CATEGORY = "video"
-    DESCRIPTION = "Directly load videos into ComfyUI via drag-and-drop or button upload (MP4, AVI, MOV, MKV, WebM). Outputs frames as an IMAGE batch and extracts audio, FPS, and frame count metadata. The 'max_frames' parameter limits the number of frames loaded (0 = all). The output 'frame_count' reflects the actual number of frames loaded (after cropping). Features a built-in preview player with real-time display of resolution, FPS, and total frame count."
+    DESCRIPTION = (
+            "Directly load videos into ComfyUI via drag-and-drop or button upload (MP4, AVI, MOV, MKV, WebM)."
+            "Outputs frames as an IMAGE batch and extracts audio, FPS, and frame count metadata. The 'max_frames' parameter limits the number of frames loaded (0 = all)."
+            "The output 'frame_count' reflects the actual number of frames loaded (after cropping). Features a built-in preview player with real-time display of resolution, FPS, and total frame count."
+    )
+    
     OUTPUT_NODE = False    # normal node, not output
     OUTPUT_TOOLTIPS = (
         "Batch of video frames as images (torch.Tensor) [N, H, W, C]",
