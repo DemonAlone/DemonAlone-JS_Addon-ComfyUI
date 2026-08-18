@@ -67,9 +67,9 @@ class DA_GroupController:
     CATEGORY = "Node Control"
     OUTPUT_NODE = True
     DESCRIPTION = (
-        "Use the context menu to switch between full and compact modes. "
-        "DA Group Controller: Manages node groups by Title (display name). "
-        "Set the mode and number of slots, then control multiple groups instantly. "
+        "Use the context menu to switch between full and compact modes."
+        "DA Group Controller: Manages node groups by Title (display name)."
+        "Set the mode and number of slots, then control multiple groups instantly."
     )
 
     @classmethod
