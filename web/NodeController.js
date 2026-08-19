@@ -861,7 +861,7 @@ const extendNodePrototype = (nodeType, nodeData) => {
         originalMenu?.apply(this, arguments);
         const compact = !!this.properties?._DA_compactMode;
         options.push({
-            content: compact ? "DA_NodeController: Full mode" : "DA_NodeController: Compact mode",
+            content: compact ? "🚦DA_NodeController: Full mode" : "🚦DA_NodeController: Compact mode",
             callback: () => this.__DA_toggleCompactMode?.(!compact, { force: true }),
         });
     };

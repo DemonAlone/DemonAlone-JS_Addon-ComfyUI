@@ -5,6 +5,8 @@ from .PresetFloat import PresetFloatNode
 from .PresetInt import PresetIntNode
 from .LoopController import SimpleLoopController
 from .prompt_formatter import DA_PromptFormatter
+from .NodeController import DA_NodeController
+from .GroupController import DA_GroupController
 
 NODE_CLASS_MAPPINGS = {
     "DA_PlaySound": DA_PlaySound,
@@ -14,6 +16,8 @@ NODE_CLASS_MAPPINGS = {
     "VideoMakerNode": VideoMakerNode,  
     "SimpleLoopController": SimpleLoopController,
     "DA_PromptFormatter": DA_PromptFormatter,
+    "DA_NodeController": DA_NodeController,
+    "DA_GroupController": DA_GroupController,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -23,7 +27,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "PresetIntNode": "Preset Int [BETA]",
     "VideoMakerNode": "Video Maker [BETA]",
     "SimpleLoopController": "Simple Loop Controller [BETA]",
-    "DA_PromptFormatter": "Prompt Formatter [BETA]",
+    "DA_PromptFormatter": "Prompt Formatter",
+    "DA_NodeController": "Node Controller [BETA]",
+    "DA_GroupController": "Group Controller [BETA]",
 }
 
 WEB_DIRECTORY = "./web"

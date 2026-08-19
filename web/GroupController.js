@@ -846,7 +846,7 @@ const extendNodePrototype = (nodeType, nodeData) => {
         originalMenu?.apply(this, arguments);
         const compact = !!this.properties?._DG_compactMode;
         options.push({
-            content: compact ? "DA_GroupController: Full mode" : "DA_GroupController: Compact mode",
+            content: compact ? "🚦DA_GroupController: Full mode" : "🚦DA_GroupController: Compact mode",
             callback: () => this.__DG_toggleCompactMode?.(!compact, { force: true }),
         });
     };
