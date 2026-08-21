@@ -34,6 +34,20 @@ function formatPrompt(text) {
     result = result.replace(/\s+\)/g, ')');
     result = result.replace(/\[\s+/g, '[');
     result = result.replace(/\s+\]/g, ']');
+	
+	// 6. Remove spaces before punctuation marks (periods and commas)
+    result = result.replace(/\s+([.,])/g, "$1");
+
+	// 7. Remove empty lines (collapse multiple newlines, trim leading/trailing newlines)
+    // Normalize Windows line endings to Unix
+    result = result.replace(/\r\n/g, '\n');
+    // Remove spaces/tabs before a newline (so blank lines with whitespace are detected)
+    result = result.replace(/[ \t]+\n/g, '\n');
+    // Replace two or more consecutive newlines with a single newline
+    result = result.replace(/\n{2,}/g, '\n');
+    // Remove leading and trailing newlines
+    result = result.replace(/^\n+/, '');
+    result = result.replace(/\n+$/, '');
 
     return result;
 }
