@@ -28,8 +28,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VideoMakerNode": "Video Maker [BETA]",
     "SimpleLoopController": "Simple Loop Controller [BETA]",
     "DA_PromptFormatter": "Prompt Formatter",
-    "DA_NodeController": "Node Controller [BETA]",
-    "DA_GroupController": "Group Controller [BETA]",
+    "DA_NodeController": "DA_NodeController [BETA]",
+    "DA_GroupController": "DA_GroupController [BETA]",
 }
 
 WEB_DIRECTORY = "./web"
