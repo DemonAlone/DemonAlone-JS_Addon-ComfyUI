@@ -1,4 +1,4 @@
-//based on feature_group_fast_toggle.js from  https://github.com/rgthree/rgthree-comfy and AUN_universal_instant.js from https://github.com/loz2754/AUN-ComfyUI-Nodes , MIT.
+// based on feature_group_fast_toggle.js from https://github.com/rgthree/rgthree-comfy and AUN_universal_instant.js from https://github.com/loz2754/AUN-ComfyUI-Nodes, MIT.
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 
@@ -179,7 +179,7 @@ const getNodesInGroup = (graph, groupName) => {
     }
 
     const allNodes = getGraphNodes(graph);
-    const nodesInGroup = allNodes.filter(node => {
+    return allNodes.filter(node => {
         const nodePos = node.pos || node._pos || [0, 0];
         const nodeSize = node.size || node._size || [0, 0];
         const nx = nodePos[0];
@@ -194,7 +194,6 @@ const getNodesInGroup = (graph, groupName) => {
     });
 
     // console.log(`[DA_GroupController] Found ${nodesInGroup.length} nodes in group "${groupName}" by geometry`);
-    return nodesInGroup;
 };
 
 // --- Helper functions for graphs ---
@@ -425,6 +424,23 @@ const saveWidgetValueToProperties = (node, widget) => {
     node.properties[widget.name] = widget.value;
 };
 
+// ---- Set all slots to given value ----
+const setAllSlots = (node, value) => {
+    if (!node) return;
+    const slotCount = clampInt(getWidget(node, "slot_count")?.value || 3);
+    node._DG_batchToggle = true;
+    for (let slot = 1; slot <= slotCount; slot++) {
+        const sw = getWidget(node, `switch_${slot}`);
+        if (sw) {
+            sw.value = value;
+            saveWidgetValueToProperties(node, sw);
+            if (sw.callback) sw.callback(value);
+        }
+    }
+    node._DG_batchToggle = false;
+    node.__DG_executeInstant?.();
+    node.__DG_refreshWidgets?.();
+};
 const attachSwitchHandlers = (node) => {
     for (let slot = 1; slot <= MAX_SLOTS; slot++) {
         const widget = getWidget(node, `switch_${slot}`);
@@ -435,13 +451,6 @@ const attachSwitchHandlers = (node) => {
             saveWidgetValueToProperties(node, widget);
             if (!enforceRestriction(node, slot, value)) return;
             if (node._DG_batchToggle || node._DG_syncingToggles) return;
-            if (!value) {
-                const allSwitch = getWidget(node, "AllSwitch");
-                if (allSwitch && allSwitch.value) {
-                    allSwitch.value = false;
-                    saveWidgetValueToProperties(node, allSwitch);
-                }
-            }
             node.__DG_executeInstant?.();
         };
     }
@@ -470,28 +479,6 @@ const attachInputHandlers = (node) => {
     }
 };
 
-const attachAllSwitchHandler = (node) => {
-    const widget = getWidget(node, "AllSwitch");
-    if (!widget) return;
-    const original = widget.callback;
-    widget.callback = function (value) {
-        if (original) original.call(widget, value);
-        saveWidgetValueToProperties(node, widget);
-        node._DG_batchToggle = true;
-        const total = clampInt(getWidget(node, "slot_count")?.value || 3);
-        for (let slot = 1; slot <= total; slot++) {
-            const sw = getWidget(node, `switch_${slot}`);
-            if (sw && sw.value !== value) {
-                sw.value = value;
-                saveWidgetValueToProperties(node, sw);
-                sw.callback?.call(sw, value);
-            }
-        }
-        node._DG_batchToggle = false;
-        node.__DG_executeInstant?.();
-    };
-};
-
 const refreshWidgets = function () {
     if (!this.widgets && !this.__DG_allWidgets) return;
     if (this.properties) {
@@ -513,6 +500,33 @@ const refreshWidgets = function () {
     const offIcon = OFF_LABELS[mode] || OFF_LABELS.Bypass;
     const onIcon = ON_LABELS[mode] || "Active 🟢";
 
+   // ---- Hide original AllSwitch ----
+    const allSwitchOrig = getWidget(this, "AllSwitch");
+    if (allSwitchOrig) allSwitchOrig.hidden = true;
+
+    // ---- Visibility of None/All buttons ----
+    const restriction = getWidget(this, "toggle_restriction")?.value || "default";
+    const showAllSwitch = getWidget(this, "show_AllSwitch")?.value || false;
+    const noneBtn = this.__DG_noneBtn;
+    const allBtn = this.__DG_allBtn;
+    if (noneBtn && allBtn) {
+        // Show if restriction == "default" and slotCount > 1,
+        // and (full mode OR (compact mode AND showAllSwitch == true))
+        const showButtons = (restriction === "default") && (slotCount > 1) &&
+                            (!isCompact || showAllSwitch);
+        noneBtn.hidden = !showButtons;
+        allBtn.hidden = !showButtons;
+    }
+
+    // ---- Visibility of show_AllSwitch itself (only in full mode) ----
+    const showAllSwitchWidget = getWidget(this, "show_AllSwitch");
+    if (showAllSwitchWidget) {
+        // Visible only in full mode and restriction == "default" and slotCount > 1
+        const show = !isCompact && (restriction === "default") && (slotCount > 1);
+        applyWidgetHiddenState(showAllSwitchWidget, !show);
+    }
+
+    // ---- Slots visibility ----
     for (let slot = 1; slot <= MAX_SLOTS; slot++) {
         const switchWidget = getWidget(this, `switch_${slot}`);
         const labelWidget = getWidget(this, `label_${slot}`);
@@ -521,9 +535,7 @@ const refreshWidgets = function () {
         const slotDisplayName = labelValue || `Slot ${slot}`;
 
         const withinRange = slot <= slotCount;
-        const slotSelected = !!switchWidget?.value;
         const slotHasTargets = splitList(targetWidget?.value).length > 0;
-        const slotActive = slotSelected && slotHasTargets;
         const hasConnectedLabelInput = hasNamedConnectedConvertedInput(this, `label_${slot}`);
         const hasConnectedTargetsInput = hasNamedConnectedConvertedInput(this, `targets_${slot}`);
         const showSlotDetails = withinRange && showFullInputs;
@@ -544,23 +556,18 @@ const refreshWidgets = function () {
         if (targetWidget) applyWidgetHiddenState(targetWidget, !showSlotDetails && !hasConnectedTargetsInput);
     }
 
+    // ---- Hide mode, slot_count, toggle_restriction in compact ----
     const hideWhenCompact = isCompact;
-    ["mode", "slot_count", "toggle_restriction", "show_AllSwitch"].forEach((name) => {
+    ["mode", "slot_count", "toggle_restriction"].forEach((name) => {
         const widget = getWidget(this, name);
         if (widget) applyWidgetHiddenState(widget, hideWhenCompact);
     });
 
-    const singleSlot = slotCount <= 1;
-    const allSwitch = getWidget(this, "AllSwitch");
-    if (allSwitch) {
-        const hideForCompactSingle = isCompact && !getWidget(this, "show_AllSwitch")?.value;
-        const shouldHide = hideForCompactSingle || singleSlot;
-        applyWidgetHiddenState(allSwitch, shouldHide);
-        if (shouldHide && allSwitch.value) {
-            allSwitch.value = false;
-            saveWidgetValueToProperties(this, allSwitch);
-            this.setDirtyCanvas?.(true, true);
-        }
+    // ---- Single slot: hide buttons and show_AllSwitch ----
+    if (slotCount <= 1) {
+        if (noneBtn) noneBtn.hidden = true;
+        if (allBtn) allBtn.hidden = true;
+        if (showAllSwitchWidget) showAllSwitchWidget.hidden = true;
     }
 
     this.setDirtyCanvas?.(true, true);
@@ -639,7 +646,6 @@ const executeInstant = function () {
     this.__DG_refreshWidgets?.();
     const mode = getWidget(this, "mode")?.value || "Bypass";
     const slotCount = clampInt(getWidget(this, "slot_count")?.value || 3);
-    const allSwitch = !!getWidget(this, "AllSwitch")?.value;
     const groupsPayload = [];
     const stateChanges = mode === "Mute" ? ["mute", "bypass"] : ["bypass", "mute"];
 
@@ -651,7 +657,7 @@ const executeInstant = function () {
         if (!switchWidget || switchWidget.hidden) continue;
         const targets = splitList(getWidget(this, `targets_${slot}`)?.value);
         if (!targets.length) continue;
-        const isActive = (switchWidget.value || allSwitch);
+        const isActive = switchWidget.value;
         targets.forEach(target => {
             if (isActive) {
                 activeGroups.add(target);
@@ -682,6 +688,8 @@ const decorateNode = (node, nodeData) => {
     node.__DG_isGroupNode = true;
     ensureWidgetTracking(node);
 
+    // Make setAllSlots available on the node
+    node.__DG_setAllSlots = setAllSlots;
     const onGraphChange = () => {
         if (!node.__DG_syncDisabled) {
             node.syncTogglesWithGraph?.();
@@ -731,6 +739,33 @@ const decorateNode = (node, nodeData) => {
     if (typeof node.properties._DG_compactMode !== "boolean") {
         node.properties._DG_compactMode = true;
     }
+
+    // ---- Create None/All buttons (standard button widgets) ----
+    setTimeout(() => {
+        if (node.__DG_noneBtn && node.__DG_allBtn) return;
+
+        const noneBtn = node.addWidget("button", "None", "none", () => {
+            if (node.__DG_setAllSlots) {
+                node.__DG_setAllSlots(node, false);
+            } else {
+                console.error("[DA_GroupController] setAllSlots not available");
+            }
+        });
+        noneBtn.__DG_isActionButton = true;
+        node.__DG_noneBtn = noneBtn;
+
+        const allBtn = node.addWidget("button", "All", "all", () => {
+            if (node.__DG_setAllSlots) {
+                node.__DG_setAllSlots(node, true);
+            } else {
+                console.error("[DA_GroupController] setAllSlots not available");
+            }
+        });
+        allBtn.__DG_isActionButton = true;
+        node.__DG_allBtn = allBtn;
+
+        node.__DG_refreshWidgets?.();
+    }, 0);
 
     node.__DG_refreshWidgets = refreshWidgets.bind(node);
     node.syncTogglesWithGraph = syncTogglesWithGraph.bind(node);
@@ -787,7 +822,6 @@ const decorateNode = (node, nodeData) => {
 
     attachSwitchHandlers(node);
     attachInputHandlers(node);
-    attachAllSwitchHandler(node);
 
     ["slot_count", "toggle_restriction", "mode", "show_AllSwitch"].forEach((name) => {
         const widget = getWidget(node, name);
