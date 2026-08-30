@@ -71,6 +71,9 @@ app.registerExtension({
         const container = document.createElement("div");
         container.style.width = "100%";
         container.style.height = "100%";
+		container.style.flex = "1 1 0px";    // Forcefully allow the flex to collapse
+        container.style.minWidth = "0px";
+        container.style.minHeight = "0px";
         container.style.backgroundColor = "#111";
         container.style.display = "flex";
         container.style.flexDirection = "column";
@@ -84,6 +87,9 @@ app.registerExtension({
         videoEl.controls = true;
         videoEl.style.width = "100%";
         videoEl.style.height = "100%";
+		videoEl.style.flex = "1 1 0px";    // Mandatory for a child element inside a flex in Nodes 2.0
+        videoEl.style.minWidth = "0px";
+        videoEl.style.minHeight = "0px";
         videoEl.style.objectFit = "contain";
         videoEl.style.display = "none";
         container.appendChild(videoEl);
