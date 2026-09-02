@@ -228,7 +228,7 @@ app.registerExtension({
             node.videoWidget = videoWidget;
             const updateVideo = async () => {
                 const filename = videoWidget.value;
-				// Обработка выбора "None"
+				// Handle selection 'None'
                 if (filename && filename !== "None" && filename !== "No video files found") {
                     const url = `/inputvideo?file=${encodeURIComponent(filename)}`;
                     videoEl.src = url;
