@@ -194,7 +194,7 @@ app.registerExtension({
                     if (options && Array.isArray(options)) {
                         if (!options.includes(filename)) {
                             options.push(filename);
-							// Убираем заглушки из списка при успешной загрузке первого файла
+							// Remove stubs from the list when the first file is successfully loaded
                             const idxNoFiles = options.indexOf("No video files found");
                             if (idxNoFiles !== -1) options.splice(idxNoFiles, 1);
                         }
