@@ -7,29 +7,32 @@ from .LoopController import SimpleLoopController
 from .prompt_formatter import DA_PromptFormatter
 from .NodeController import DA_NodeController
 from .GroupController import DA_GroupController
+from .VideoMaker_v2 import VideoMakerV2
 
 NODE_CLASS_MAPPINGS = {
     "DA_GroupController": DA_GroupController,
+    "DA_NodeController": DA_NodeController,
     "DA_PlaySound": DA_PlaySound,
     "DA_PromptFormatter": DA_PromptFormatter,
-    "DA_NodeController": DA_NodeController,
     "LoadVideoNode": LoadVideoNode,
     "PresetFloatNode": PresetFloatNode,
     "PresetIntNode": PresetIntNode,
+    "VideoMakerNode": VideoMakerNode,
+    "VideoMakerV2": VideoMakerV2,      
     "SimpleLoopController": SimpleLoopController,
-    "VideoMakerNode": VideoMakerNode,  
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "DA_GroupController": "DA_GroupController [BETA]",
+    "DA_NodeController": "DA_NodeController [BETA]",
     "DA_PlaySound": "DA_PlaySound",
     "DA_PromptFormatter": "Prompt Formatter",
-    "DA_NodeController": "DA_NodeController [BETA]",
     "LoadVideoNode": "Load Video [BETA]",
     "PresetFloatNode": "Preset Float [BETA]",
     "PresetIntNode": "Preset Int [BETA]",
+    "VideoMakerNode": "Video Maker [DEPRECATED]",
+    "VideoMakerV2": "Video Maker V2 [BETA]",
     "SimpleLoopController": "Simple Loop Controller [BETA]",
-    "VideoMakerNode": "Video Maker [BETA]",
 }
 
 WEB_DIRECTORY = "./web"
