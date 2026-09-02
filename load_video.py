@@ -35,7 +35,7 @@ async def upload_video(request):
 @PromptServer.instance.routes.get("/get_video_metadata")
 async def get_video_metadata(request):
     filename = request.query.get("file")
-    if not filename:
+    if not filename or filename == "None":
         return web.Response(status=400, text="Missing file parameter")
     
     safe_path = os.path.abspath(os.path.join(video_input_folder, filename))
@@ -76,7 +76,7 @@ async def get_video_metadata(request):
 @PromptServer.instance.routes.get("/inputvideo")
 async def serve_input_video(request):
     filename = request.query.get("file")
-    if not filename:
+    if not filename or filename == "None":
         return web.Response(status=400, text="Missing file parameter")
     # Security: check path is within folder
     safe_path = os.path.abspath(os.path.join(video_input_folder, filename))
@@ -94,13 +94,17 @@ class LoadVideoNode:
     @classmethod
     def INPUT_TYPES(cls):
         supported_ext = ('.mp4', '.avi', '.mov', '.mkv', '.webm')
-        files = []
+        files = ["None"] # Add a placeholder at the very beginning
         if os.path.exists(video_input_folder):
+            disk_files = []
             for f in os.listdir(video_input_folder):
                 if f.lower().endswith(supported_ext):
-                    files.append(f)
-        if not files:
-            files = ["No video files found"]
+                    disk_files.append(f)
+            disk_files.sort()
+            files.extend(disk_files)
+            
+        if len(files) == 1: # So there is nothing except 'None'
+            files = ["None", "No video files found"]
         return {
             "required": {
                 "video": (files,),
@@ -118,14 +122,21 @@ class LoadVideoNode:
             "The output 'frame_count' reflects the actual number of frames loaded (after cropping). Features a built-in preview player with real-time display of resolution, FPS, and total frame count."
     )
     
-    OUTPUT_NODE = False    # normal node, not output
+    OUTPUT_NODE = False
     OUTPUT_TOOLTIPS = (
         "Batch of video frames as images (torch.Tensor) [N, H, W, C]",
         "Dictionary with 'waveform' and 'sample_rate', or None if no audio",
         "Frames per second of the video (float)",
         "Actual number of frames loaded, respecting the 'max_frames' limit"
     )
+    
     def load_video(self, video, max_frames):
+        # Handle 'None' selection or stub
+        if video == "None" or video == "No video files found":
+            # Return empty correct stubs so as not to break downstream nodes in the graph
+            empty_image = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
+            return (None, None, 0.0, 0)
+
         video_path = os.path.join(video_input_folder, video)
         if not os.path.exists(video_path):
             raise FileNotFoundError(f"Video file not found: {video_path}")
@@ -135,6 +146,7 @@ class LoadVideoNode:
         audio_stream = next((s for s in container.streams if s.type == 'audio'), None)
 
         if video_stream is None:
+            container.close()
             raise RuntimeError("No video stream found.")
         original_fps = float(video_stream.average_rate) if video_stream.average_rate else 25.0
 

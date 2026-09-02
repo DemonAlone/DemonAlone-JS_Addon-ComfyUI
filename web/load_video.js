@@ -194,17 +194,16 @@ app.registerExtension({
                     if (options && Array.isArray(options)) {
                         if (!options.includes(filename)) {
                             options.push(filename);
-                            const idx = options.indexOf("No video files found");
-                            if (idx !== -1) options.splice(idx, 1);
+							// Убираем заглушки из списка при успешной загрузке первого файла
+                            const idxNoFiles = options.indexOf("No video files found");
+                            if (idxNoFiles !== -1) options.splice(idxNoFiles, 1);
                         }
                     } else if (options && options.values && Array.isArray(options.values)) {
                         if (!options.values.includes(filename)) {
                             options.values.push(filename);
-                            const idx = options.values.indexOf("No video files found");
-                            if (idx !== -1) options.values.splice(idx, 1);
-                        }
-                    } else {
-                        console.warn("Unknown widget options structure", options);
+                            const idxNoFiles = options.values.indexOf("No video files found");
+                            if (idxNoFiles !== -1) options.values.splice(idxNoFiles, 1);
+						}
                     }
 
                     widget.value = filename;
@@ -229,7 +228,8 @@ app.registerExtension({
             node.videoWidget = videoWidget;
             const updateVideo = async () => {
                 const filename = videoWidget.value;
-                if (filename && filename !== "No video files found") {
+				// Обработка выбора "None"
+                if (filename && filename !== "None" && filename !== "No video files found") {
                     const url = `/inputvideo?file=${encodeURIComponent(filename)}`;
                     videoEl.src = url;
                     videoEl.load();
@@ -256,12 +256,11 @@ app.registerExtension({
                     } catch (err) {
                         console.error("Failed to fetch video metadata:", err);
 					}
-					
                 } else {
                     videoEl.style.display = "none";
                     statusDiv.style.display = "block";
-                    statusDiv.textContent = "No video selected";
-					resolutionInfo.style.display = "none"; // Hide when there is no video
+                    statusDiv.textContent = filename === "None" ? "No video (None)" : "No video selected";
+					resolutionInfo.style.display = "none";
 					fpsInfo.style.display = "none";
                     frameCountInfo.style.display = "none";
                 }
