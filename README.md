@@ -2,8 +2,9 @@ These nodes are implemented in JavaScript to ensure a highly responsive interfac
 
 ## Credits:
 
-This project uses [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) by **Vanilagy**, 
+* **Video Maker** uses [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) by **Vanilagy**, 
 licensed under the MIT License. See the file `web/js/mp4-muxer.LICENSE` for details.
+This node is deprecated and will be removed in the future. Please use **Video Maker V2** instead.
 
 * **DA_Playsound** is based on **PlaySound 🐍** from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts).
 
