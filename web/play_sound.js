@@ -36,9 +36,14 @@ app.registerExtension({
                         if (durationWidget) maxDuration = durationWidget.value;
                     }
 
-                    // Form a correct URL (the file must be in the extension's web folder)
+					// --- Security fix: prevent path traversal ---
+					if (targetFile.includes('..') || targetFile.startsWith('/') || /^[A-Za-z]:/.test(targetFile)) {
+						console.error(`[DA_PlaySound] Blocked invalid file path: ${targetFile}`);
+						return;
+					}
+					// -------------------------------------------
 					const baseUrl = new URL('.', import.meta.url).href;
-                    const audioUrl = new URL(targetFile, baseUrl).href;
+					const audioUrl = new URL(targetFile, baseUrl).href;
 
                     let audio;
 
