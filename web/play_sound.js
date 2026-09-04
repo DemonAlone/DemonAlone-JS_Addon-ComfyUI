@@ -2,7 +2,6 @@ import { app } from "../../../scripts/app.js";
 
 console.log("[DA_PlaySound] Extension loaded");
 
-// Global cache in browser memory to avoid downloading the same file over the network repeatedly
 const audioCache = {};
 
 app.registerExtension({
@@ -16,17 +15,20 @@ app.registerExtension({
                 onExecuted?.apply(this, arguments);
 
                 try {
-                    const executedData = arguments[1];
+                    console.log("[DA_PlaySound] onExecuted triggered with args:", arguments);
+                    const executedData = arguments[0];
                     let targetFile = "default.mp3";
                     let targetVolume = 0.5;
                     let maxDuration = 0.0;
 
+                    // If the backend sent data via ui, we take it
                     if (executedData && executedData.ui && executedData.ui.da_play_audio) {
                         const audioData = executedData.ui.da_play_audio[0];
                         targetFile = audioData.file;
                         targetVolume = audioData.volume;
                         maxDuration = audioData.duration;
                     } else {
+                       // Otherwise (or forcefully) read directly from the node widgets
                         const fileWidget = this.widgets.find(w => w.name === 'audio_file');
                         const volumeWidget = this.widgets.find(w => w.name === 'volume');
                         const durationWidget = this.widgets.find(w => w.name === 'duration');
@@ -36,28 +38,22 @@ app.registerExtension({
                         if (durationWidget) maxDuration = durationWidget.value;
                     }
 
-					// --- Security fix: prevent path traversal ---
-					if (targetFile.includes('..') || targetFile.startsWith('/') || /^[A-Za-z]:/.test(targetFile)) {
-						console.error(`[DA_PlaySound] Blocked invalid file path: ${targetFile}`);
-						return;
-					}
-					// -------------------------------------------
-					const baseUrl = new URL('.', import.meta.url).href;
-					const audioUrl = new URL(targetFile, baseUrl).href;
+                    // Path traversal protection
+                    if (targetFile.includes('..') || targetFile.startsWith('/') || /^[A-Za-z]:/.test(targetFile)) {
+                        console.error(`[DA_PlaySound] Blocked invalid file path: ${targetFile}`);
+                        return;
+                    }
+
+                    const baseUrl = new URL('.', import.meta.url).href;
+                    const audioUrl = new URL(targetFile, baseUrl).href;
 
                     let audio;
-
-                    // Check if this sound is already in browser memory
-					if (audioCache[audioUrl]) {
-                        console.log("[DA_PlaySound] Using cached audio object");
+                    if (audioCache[audioUrl]) {
                         audio = audioCache[audioUrl];
-                        // Reset time to start to allow replaying
-						audio.currentTime = 0;
+                        audio.currentTime = 0;
                     } else {
-                        console.log("[DA_PlaySound] First network load of file:", audioUrl);
                         audio = new Audio(audioUrl);
-                        // Save to cache
-						audioCache[audioUrl] = audio;
+                        audioCache[audioUrl] = audio;
                     }
 
                     audio.volume = targetVolume;
@@ -76,7 +72,6 @@ app.registerExtension({
                             if (!audio.paused) {
                                 audio.pause();
                                 audio.currentTime = 0;
-                                console.log(`[DA_PlaySound] Playback stopped by duration limit (${maxDuration}s)`);
                             }
                         }, maxDuration * 1000);
                     }

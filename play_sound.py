@@ -1,24 +1,6 @@
 # DA_Playsound is based on PlaySound 🐍 from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) by pythongosssss
-import json
-import urllib.request
 import os
 import time
-
-_cached_port = None
-
-def get_server_port():
-    global _cached_port
-    if _cached_port is not None:
-        return _cached_port
-    port = 8188
-    try:
-        from server import PromptServer
-        if PromptServer.instance and hasattr(PromptServer.instance, 'port'):
-            port = PromptServer.instance.port
-    except Exception:
-        pass
-    _cached_port = port
-    return port
 
 def get_audio_files():
     current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -64,20 +46,18 @@ class DA_PlaySound:
         
         if play_only_when_queue_empty:
             try:
-                port = get_server_port()
-                url = f"http://127.0.0.1:{port}/api/jobs?status=in_progress,pending&limit=200&offset=0"
-                req = urllib.request.Request(url)
-                with urllib.request.urlopen(req, timeout=2) as response:
-                    if response.status == 200:
-                        data = json.loads(response.read().decode('utf-8'))
-                        total_jobs = data.get('pagination', {}).get('total', 0)
-                        if total_jobs > 1:
-                            should_play = False
+                from server import PromptServer
+                if PromptServer.instance and hasattr(PromptServer.instance, 'prompt_queue'):
+                    # Receive current tasks from the server's internal memory without network requests
+                    queue_running, queue_pending = PromptServer.instance.prompt_queue.get_current_queue()
+                    # If there are tasks in the pending queue besides the current one
+                    if len(queue_pending) > 0:
+                        should_play = False
             except Exception as e:
-                print(f"[DA_PlaySound] Error checking queue: {e}")
-                should_play = False
+                # If in the future the internal API changes and the method fails - 
+                # log the error, but do not disable generation for the user
+                print(f"[DA_PlaySound] Internal queue check warning: {e}")
 
-        # If play is needed, pass the signal and file name to the frontend via UI.
         ui_data = {}
         if should_play:
             ui_span = {
