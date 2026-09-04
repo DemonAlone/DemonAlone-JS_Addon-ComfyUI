@@ -749,7 +749,7 @@ const decorateNode = (node, nodeData) => {
         }
     };
 
-    node.__DA_sanitizeWidgets = sanitizeLegacyValues.bind(node);
+    node.__DA_sanitizeWidgets = () => sanitizeLegacyValues.call(node);
     node.__DA_sanitizeWidgets?.();
 
     node.properties = node.properties || {};
@@ -787,9 +787,9 @@ const decorateNode = (node, nodeData) => {
         node.__DA_allBtn = allBtn;
         node.__DA_refreshWidgets?.();
     }, 0);
-    node.__DA_refreshWidgets = refreshWidgets.bind(node);
-    node.syncTogglesWithGraph = syncTogglesWithGraph.bind(node);
-    node.__DA_executeInstant = executeInstant.bind(node);
+	node.__DA_refreshWidgets = () => refreshWidgets.call(node);
+	node.syncTogglesWithGraph = () => syncTogglesWithGraph.call(node);
+	node.__DA_executeInstant = () => executeInstant.call(node);
     node.__DA_toggleCompactMode = (nextState, { force = false } = {}) => {
         if (node.__DA_toggleInProgress) return;
         const activeElement = document.activeElement;
