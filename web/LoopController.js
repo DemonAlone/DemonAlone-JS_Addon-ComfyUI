@@ -26,7 +26,7 @@ app.registerExtension({
                 if (widget.callback) {
                     widget.callback(value, node);
                 }
-                console.log(`[LoopUI] syncWidget: ${widget.name} = ${value}, widgets_values:`, node.widgets_values);
+                console.log("[LoopUI] syncWidget:", widget.name, "=", value, "widgets_values:", node.widgets_values);
             }
 
             const origNodeCreated = nodeType.prototype.onNodeCreated;

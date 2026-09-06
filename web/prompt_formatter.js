@@ -26,8 +26,8 @@ function formatPrompt(text) {
     result = replaceBracketsWithWeight(result, "(", ")", WEIGHT_FACTOR);
     result = replaceBracketsWithWeight(result, "[", "]", NEG_FACTOR);
 
-    // 4. Add a space after comma/period if followed by a letter or digit (excluding decimals)
-    result = result.replace(/([.,])([^\s\d,.])/g, (match, punct, next) => punct + " " + next);
+    // 4. Add a space after comma/period only if followed strictly by a letter or a digit
+    result = result.replace(/([.,])([a-zA-Zа-яА-Я0-9])/g, "$1 $2");
 	
 	// 5. Remove spaces immediately after opening parentheses/brackets and before closing
     result = result.replace(/\(\s+/g, '(');
@@ -37,6 +37,10 @@ function formatPrompt(text) {
 	
 	// 6. Remove spaces before punctuation marks (periods and commas)
     result = result.replace(/\s+([.,])/g, "$1");
+
+    // 6.1. Remove spaces before closing quotes and brackets
+    result = result.replace(/\s+(["'])/g, "$1");
+    result = result.replace(/\s+([)\]])/g, "$1");
 
 	// 7. Remove empty lines (collapse multiple newlines, trim leading/trailing newlines)
     // Normalize Windows line endings to Unix
@@ -55,11 +59,16 @@ function formatPrompt(text) {
 function replaceBracketsWithWeight(text, open, close, factor) {
     let changed = true;
     let result = text;
-
+	// Define static regulars depending on the characters, 
+    // so that security scanners don't fall on dynamic RegExp
+    const isRound = (open === "(");
+    const regex = isRound 
+        ? /(\({2,})([^\(\)]*?)(\){2,})/g 
+        : /(\[{2,})([^\[\]]*?)(\]{2,})/g;
     while (changed) {
         changed = false;
         const newResult = result.replace(
-            new RegExp(`(\\${open}{2,})([^\\${open}\\${close}]*?)(\\${close}{2,})`, "g"),
+			regex,
             (full, opens, content, closes) => {
                 const pairs = Math.min(opens.length, closes.length);
                 if (pairs < 2) return full;
