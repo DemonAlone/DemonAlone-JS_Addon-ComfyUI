@@ -38,10 +38,6 @@ function formatPrompt(text) {
 	// 6. Remove spaces before punctuation marks (periods and commas)
     result = result.replace(/\s+([.,])/g, "$1");
 
-    // 6.1. Remove spaces before closing quotes and brackets
-    result = result.replace(/\s+(["'])/g, "$1");
-    result = result.replace(/\s+([)\]])/g, "$1");
-
 	// 7. Remove empty lines (collapse multiple newlines, trim leading/trailing newlines)
     // Normalize Windows line endings to Unix
     result = result.replace(/\r\n/g, '\n');
