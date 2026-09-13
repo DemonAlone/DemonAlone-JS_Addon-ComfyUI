@@ -8,6 +8,7 @@ from .prompt_formatter import DA_PromptFormatter
 from .NodeController import DA_NodeController
 from .GroupController import DA_GroupController
 from .VideoMaker_v2 import VideoMakerV2
+from .load_video_nodes2 import LoadVideoNodes2
 
 NODE_CLASS_MAPPINGS = {
     "DA_GroupController": DA_GroupController,
@@ -15,6 +16,7 @@ NODE_CLASS_MAPPINGS = {
     "DA_PlaySound": DA_PlaySound,
     "DA_PromptFormatter": DA_PromptFormatter,
     "LoadVideoNode": LoadVideoNode,
+    "LoadVideoNodes2": LoadVideoNodes2,
     "PresetFloatNode": PresetFloatNode,
     "PresetIntNode": PresetIntNode,
     "VideoMakerNode": VideoMakerNode,
@@ -28,6 +30,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DA_PlaySound": "DA_PlaySound",
     "DA_PromptFormatter": "Prompt Formatter",
     "LoadVideoNode": "Load Video [BETA]",
+    "LoadVideoNodes2": "Load Video (Nodes 2.0 only) [BETA]",
     "PresetFloatNode": "Preset Float [BETA]",
     "PresetIntNode": "Preset Int [BETA]",
     "VideoMakerNode": "Video Maker [DEPRECATED]",
