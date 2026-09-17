@@ -20,12 +20,6 @@ class DA_NodeController:
                     "default": "default",
                     "tooltip": "Logic for toggles: 'max one' allows only one active, 'always one' ensures at least one is active."
                 }),
-                "AllSwitch": ("BOOLEAN", {
-                    "default": False,
-                    "label_on": "All 🟢",
-                    "label_off": "Individual",
-                    "tooltip": "ON = all groups active (🟢). OFF = use individual group switches."
-                }),
                 "show_AllSwitch": ("BOOLEAN", {
                     "default": False,
                     "tooltip": "Show the AllSwitch toggle even in compact mode."
@@ -89,11 +83,8 @@ class DA_NodeController:
         else:
             return ["bypass", "mute"]
 
-    def execute(self, mode="Bypass", slot_count=3, toggle_restriction="default", AllSwitch=False, unique_id=None, **kwargs):
+    def execute(self, mode="Bypass", slot_count=3, toggle_restriction="default", unique_id=None, **kwargs):
         try:
-            if slot_count == 1:
-                AllSwitch = False
-
             state_changes = self._compute_state_changes(mode)
 
             id_states = {}
@@ -101,7 +92,7 @@ class DA_NodeController:
 
             for i in range(1, 21):
                 if i <= slot_count:
-                    switch = kwargs.get(f"switch_{i}", False) or AllSwitch
+                    switch = kwargs.get(f"switch_{i}", False)
                     target_type = kwargs.get(f"target_type_{i}", "ID")
                     targets_str = kwargs.get(f"targets_{i}", "0")
 

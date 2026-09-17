@@ -507,10 +507,6 @@ const refreshWidgets = function () {
     const offIcon = OFF_LABELS[mode] || OFF_LABELS.Bypass;
     const onIcon = ON_LABELS[mode] || "Active 🟢";
 
-    // ---- Hide original AllSwitch ----
-    const allSwitchOrig = getWidget(this, "AllSwitch");
-    if (allSwitchOrig) allSwitchOrig.hidden = true;
-
     // ---- Visibility of None/All buttons ----
     const restriction = getWidget(this, "toggle_restriction")?.value || "default";
     const showAllSwitch = getWidget(this, "show_AllSwitch")?.value || false;
@@ -827,20 +823,20 @@ const decorateNode = (node, nodeData) => {
 
 	const originalOnRemoved = node.onRemoved;
 	node.onRemoved = function (...args) {
-			if (this.__DA_autoHeightTimer) clearTimeout(this.__DA_autoHeightTimer);
-			if (this.__DA_compactLayoutTimer) clearTimeout(this.__DA_compactLayoutTimer);
+		if (this.__DA_autoHeightTimer) clearTimeout(this.__DA_autoHeightTimer);
+		if (this.__DA_compactLayoutTimer) clearTimeout(this.__DA_compactLayoutTimer);
 
-			// safe unsubscription from graph events
-			try {
-				if (this.__DA_graphChangeHandler && this.graph && typeof this.graph.off === "function") {
-					this.graph.off('change', this.__DA_graphChangeHandler);
-				}
-			} catch (e) {
-				console.warn("[DA_NodeController] Failed to unbind graph event:", e);
+		// safe unsubscription from graph events
+		try {
+			if (this.__DA_graphChangeHandler && this.graph && typeof this.graph.off === "function") {
+				this.graph.off('change', this.__DA_graphChangeHandler);
 			}
-			this.__DA_graphChangeHandler = null;
-			return originalOnRemoved?.apply(this, args);
-	};
+		} catch (e) {
+			console.warn("[DA_NodeController] Failed to unbind graph event:", e);
+		}
+		this.__DA_graphChangeHandler = null;
+		return originalOnRemoved?.apply(this, args);
+};
 
     attachSwitchHandlers(node);
     attachInputHandlers(node);
@@ -858,7 +854,6 @@ const decorateNode = (node, nodeData) => {
     });
 
     setTimeout(() => node.__DA_refreshWidgets?.(), 250);
-
 };
 
 const extendNodePrototype = (nodeType, nodeData) => {
