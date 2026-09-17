@@ -19,12 +19,6 @@ class DA_GroupController:
                     "default": "default",
                     "tooltip": "Logic for toggles: 'max one' allows only one active, 'always one' ensures at least one is active."
                 }),
-                "AllSwitch": ("BOOLEAN", {
-                    "default": False,
-                    "label_on": "All 🟢",
-                    "label_off": "Individual",
-                    "tooltip": "ON = all groups active (🟢). OFF = use individual group switches."
-                }),
                 "show_AllSwitch": ("BOOLEAN", {
                     "default": False,
                     "tooltip": "Show the AllSwitch toggle even in compact mode."

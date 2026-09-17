@@ -491,7 +491,7 @@ const refreshWidgets = function () {
             }
         });
     }
-    getAllTrackedWidgets(this).forEach(ensureHiddenAwareWidget);
+    getAllTrackedWidgets(this).ensureHiddenAwareWidget;
     const slotCount = clampInt(getWidget(this, "slot_count")?.value || 3);
     const isCompact = !!this.properties?._DG_compactMode;
     const mode = getWidget(this, "mode")?.value || "Bypass";
@@ -499,10 +499,6 @@ const refreshWidgets = function () {
     const showSelectedSlotsCompact = isCompact;
     const offIcon = OFF_LABELS[mode] || OFF_LABELS.Bypass;
     const onIcon = ON_LABELS[mode] || "Active 🟢";
-
-   // ---- Hide original AllSwitch ----
-    const allSwitchOrig = getWidget(this, "AllSwitch");
-    if (allSwitchOrig) allSwitchOrig.hidden = true;
 
     // ---- Visibility of None/All buttons ----
     const restriction = getWidget(this, "toggle_restriction")?.value || "default";
