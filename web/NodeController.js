@@ -373,6 +373,17 @@ const sanitizeLegacyValues = function () {
             dirty = true;
         }
     }
+
+	// Protection against resetting mode to false or invalid values
+    const modeWidget = getWidget(this, "mode");
+    if (modeWidget) {
+        const mVal = modeWidget.value;
+        if (mVal !== "Bypass" && mVal !== "Mute") {
+            modeWidget.value = "Bypass";
+            dirty = true;
+        }
+    }
+
     for (let slot = 1; slot <= MAX_SLOTS; slot++) {
         const typeWidget = getWidget(this, `target_type_${slot}`);
         if (!typeWidget) continue;
@@ -480,24 +491,30 @@ const attachInputHandlers = (node) => {
             typeWidget.callback = function (value) {
                 if (original) original.call(typeWidget, value);
                 saveWidgetValueToProperties(node, typeWidget);
-                node.__DA_refreshWidgets?.();
+                node.__DA_executeInstant?.();
             };
         }
     }
 };
 
+const applyPropertiesToWidgets = (node) => {
+    if (!node || !node.properties) return;
+    getAllTrackedWidgets(node).forEach((widget) => {
+        if (widget.name && node.properties[widget.name] !== undefined) {
+            const saved = node.properties[widget.name];
+            if (widget.value !== saved) {
+                widget.value = saved;
+            }
+        }
+    });
+};
+
 const refreshWidgets = function () {
     if (!this.widgets && !this.__DA_allWidgets) return;
-    if (this.properties) {
-        getAllTrackedWidgets(this).forEach((widget) => {
-            if (widget.name && this.properties[widget.name] !== undefined) {
-                const saved = this.properties[widget.name];
-                if (widget.value !== saved) {
-                    widget.value = saved;
-                }
-            }
-        });
-    }
+    
+	// Apply properties first to update values ​​before calculating visibility
+    applyPropertiesToWidgets(this);
+
     getAllTrackedWidgets(this).forEach(ensureHiddenAwareWidget);
     const slotCount = clampInt(getWidget(this, "slot_count")?.value || 3);
     const isCompact = !!this.properties?._DA_compactMode;
@@ -529,6 +546,9 @@ const refreshWidgets = function () {
         applyWidgetHiddenState(showAllSwitchWidget, !show);
     }
 
+	// If the node is in the process of initialization, we forcefully extinguish unnecessary elements so that they do not become an eyesore
+    const forceHideAll = !!this.__DA_isInitializing;
+	
     // ---- Slots visibility ----
     for (let slot = 1; slot <= MAX_SLOTS; slot++) {
         const switchWidget = getWidget(this, `switch_${slot}`);
@@ -539,7 +559,6 @@ const refreshWidgets = function () {
         const slotDisplayName = labelValue || `Slot ${slot}`;
 
         const withinRange = slot <= slotCount;
-        const slotSelected = !!switchWidget?.value;
         const slotHasTargets = splitList(targetWidget?.value).length > 0;
         const hasConnectedLabelInput = hasNamedConnectedConvertedInput(this, `label_${slot}`);
         const hasConnectedTargetsInput = hasNamedConnectedConvertedInput(this, `targets_${slot}`);
@@ -547,7 +566,7 @@ const refreshWidgets = function () {
 		
         if (switchWidget) {
             const hideForCompactSelection = showSelectedSlotsCompact && !slotHasTargets;
-            applyWidgetHiddenState(switchWidget, !withinRange || hideForCompactSelection);
+            applyWidgetHiddenState(switchWidget, forceHideAll || !withinRange || hideForCompactSelection);
             switchWidget.options = switchWidget.options || {};
             switchWidget.options.on = onIcon;
             switchWidget.options.off = offIcon;
@@ -557,20 +576,20 @@ const refreshWidgets = function () {
             switchWidget.label_off = offIcon;
             switchWidget.label = slotDisplayName;
         }
-        if (labelWidget) applyWidgetHiddenState(labelWidget, !showSlotDetails && !hasConnectedLabelInput);
-        if (targetWidget) applyWidgetHiddenState(targetWidget, !showSlotDetails && !hasConnectedTargetsInput);
-        if (typeWidget) applyWidgetHiddenState(typeWidget, !showSlotDetails);
+        if (labelWidget) applyWidgetHiddenState(labelWidget, forceHideAll || (!showSlotDetails && !hasConnectedLabelInput));
+        if (targetWidget) applyWidgetHiddenState(targetWidget, forceHideAll || (!showSlotDetails && !hasConnectedTargetsInput));
+        if (typeWidget) applyWidgetHiddenState(typeWidget, forceHideAll || !showSlotDetails);
     }
 	
 	// ---- Hide mode, slot_count, toggle_restriction in compact ----
-    const hideWhenCompact = isCompact;
+    const hideWhenCompact = forceHideAll || isCompact;
     ["mode", "slot_count", "toggle_restriction"].forEach((name) => {
         const widget = getWidget(this, name);
         if (widget) applyWidgetHiddenState(widget, hideWhenCompact);
     });
 
     // ---- Single slot: hide buttons and show_AllSwitch ----
-    if (slotCount <= 1) {
+    if (slotCount <= 1 || forceHideAll) {
         if (noneBtn) noneBtn.hidden = true;
         if (allBtn) allBtn.hidden = true;
         if (showAllSwitchWidget) showAllSwitchWidget.hidden = true;
@@ -580,7 +599,6 @@ const refreshWidgets = function () {
     this.__DA_syncWidgetVisibility?.();
     syncWidgetBackedInputVisibility(this);
     this.__DA_updateAutoHeight?.();
-    scheduleAutoHeightUpdate(this);
 };
 
 const scheduleAutoHeightUpdate = (node, attempts = 3, delay = 0) => {
@@ -593,21 +611,8 @@ const scheduleAutoHeightUpdate = (node, attempts = 3, delay = 0) => {
     }, delay);
 };
 
-const scheduleCompactLayoutStabilization = (node, attempts = 2, delay = 0) => {
-    if (!node) return;
-    if (node.__DA_compactLayoutTimer) clearTimeout(node.__DA_compactLayoutTimer);
-    node.__DA_compactLayoutTimer = setTimeout(() => {
-        node.__DA_compactLayoutTimer = null;
-        node.__DA_refreshWidgets?.();
-        node.__DA_updateAutoHeight?.();
-        node.setDirtyCanvas?.(true, true);
-        node.graph?.setDirtyCanvas?.(true, true);
-        if (attempts > 1) scheduleCompactLayoutStabilization(node, attempts - 1, 50);
-    }, delay);
-};
-
 const syncTogglesWithGraph = function () {
-    if ((!this.widgets && !this.__DA_allWidgets) || this.configuring) return;
+    if ((!this.widgets && !this.__DA_allWidgets) || this.configuring || this.__DA_isInitializing) return;
     const mode = getWidget(this, "mode")?.value || "Bypass";
     const slotCount = clampInt(getWidget(this, "slot_count")?.value || 3);
     let dirty = false;
@@ -638,7 +643,7 @@ const syncTogglesWithGraph = function () {
 };
 
 const executeInstant = function () {
-    if ((!this.widgets && !this.__DA_allWidgets) || this.configuring) return;
+    if ((!this.widgets && !this.__DA_allWidgets) || this.configuring || this.__DA_isInitializing) return;
     this.__DA_refreshWidgets?.();
     const mode = getWidget(this, "mode")?.value || "Bypass";
     const slotCount = clampInt(getWidget(this, "slot_count")?.value || 3);
@@ -698,13 +703,15 @@ const decorateNode = (node, nodeData) => {
 
     node.__DA_isUniversalNode = true;
     node.__DA_isGroupNode = false;
+	node.__DA_isInitializing = true; // Block logic during initial creation
+   
     ensureWidgetTracking(node);
 	
 	// Make setAllSlots available on the node
     node.__DA_setAllSlots = setAllSlots;
 	
 	const onGraphChange = () => {
-        if (!node.__DA_syncDisabled) {
+        if (!node.__DA_syncDisabled && !node.__DA_isInitializing) {
             node.syncTogglesWithGraph?.();
         }
     };
@@ -745,60 +752,42 @@ const decorateNode = (node, nodeData) => {
         }
     };
 
+    // Immediately pull up properties before any calculations
+    node.properties = node.properties || {};
+    
+    // CRITICAL FIX: If there is a saved compact mode in properties, take it IMMEDIATELY,
+    // so that the node is not rendered with the default full/compact on the first frame.
+    if (node.properties._DA_compactMode === undefined) {
+        node.properties._DA_compactMode = true; // дефолт
+    }
+
+    // Apply the saved widget values ​​from properties directly during creation
+    applyPropertiesToWidgets(node);
     node.__DA_sanitizeWidgets = () => sanitizeLegacyValues.call(node);
     node.__DA_sanitizeWidgets?.();
 
-    node.properties = node.properties || {};
-    if (typeof node.properties._DA_compactMode !== "boolean") {
-        node.properties._DA_compactMode = true;
-    }
-
-    // ---- Create None/All buttons (standard button widgets) ----
-    // We'll add them after all widgets are created, then move them to the front.
-    // Use setTimeout to ensure widgets are fully initialized.
-    setTimeout(() => {
-        // Check if already created
-        if (node.__DA_noneBtn && node.__DA_allBtn) return;
+    // Create None/All buttons instantly and immediately hide unnecessary ones via refresh
+    if (!node.__DA_noneBtn && !node.__DA_allBtn) {
 
         // Create None button
-        const noneBtn = node.addWidget("button", "None", "none", () => {
-            if (node.__DA_setAllSlots) {
-                node.__DA_setAllSlots(node, false);
-            } else {
-                console.error("[DA_NodeController] setAllSlots not available");
-            }
+		const noneBtn = node.addWidget("button", "None", "none", () => {
+            node.__DA_setAllSlots?.(node, false);
         });
         noneBtn.__DA_isActionButton = true;
         node.__DA_noneBtn = noneBtn;
 
         // Create All button
-        const allBtn = node.addWidget("button", "All", "all", () => {
-            if (node.__DA_setAllSlots) {
-                node.__DA_setAllSlots(node, true);
-            } else {
-                console.error("[DA_NodeController] setAllSlots not available");
-            }
+		const allBtn = node.addWidget("button", "All", "all", () => {
+            node.__DA_setAllSlots?.(node, true);
         });
         allBtn.__DA_isActionButton = true;
         node.__DA_allBtn = allBtn;
-        node.__DA_refreshWidgets?.();
-    }, 0);
+    }
 	node.__DA_refreshWidgets = () => refreshWidgets.call(node);
 	node.syncTogglesWithGraph = () => syncTogglesWithGraph.call(node);
 	node.__DA_executeInstant = () => executeInstant.call(node);
     node.__DA_toggleCompactMode = (nextState, { force = false } = {}) => {
         if (node.__DA_toggleInProgress) return;
-        const activeElement = document.activeElement;
-        const isWidgetInput =
-            activeElement &&
-            (activeElement.tagName === "INPUT" ||
-                activeElement.tagName === "TEXTAREA" ||
-                activeElement.classList?.contains("litegraph") ||
-                activeElement.id?.includes("widget"));
-        const canvas = app.canvas;
-        const interactingWidget = canvas?.interacting_widget || canvas?.active_widget;
-        if (!force && (isWidgetInput || interactingWidget)) return;
-
         node.__DA_toggleInProgress = true;
         try {
             const current = !!node.properties._DA_compactMode;
@@ -808,7 +797,6 @@ const decorateNode = (node, nodeData) => {
             node.__DA_refreshWidgets?.();
             node.__DA_updateAutoHeight?.();
             scheduleAutoHeightUpdate(node);
-            scheduleCompactLayoutStabilization(node, 2, 0);
             node.setDirtyCanvas?.(true, true);
         } finally {
             setTimeout(() => { node.__DA_toggleInProgress = false; }, 50);
@@ -853,7 +841,13 @@ const decorateNode = (node, nodeData) => {
         };
     });
 
-    setTimeout(() => node.__DA_refreshWidgets?.(), 250);
+    // Primary calculation and removal of the initialization flag
+    node.__DA_refreshWidgets?.();
+    // Remove the initialization lock a little later so that switching Legacy/Nodes 2.0 has time to stabilize the graph
+	setTimeout(() => {
+        node.__DA_isInitializing = false;
+        node.__DA_refreshWidgets?.();
+    }, 100);
 };
 
 const extendNodePrototype = (nodeType, nodeData) => {
@@ -867,31 +861,38 @@ const extendNodePrototype = (nodeType, nodeData) => {
 	nodeType.prototype.onAdded = function () {
 		originalOnAdded?.apply(this, arguments);
 		this.__DA_sanitizeWidgets?.();
+		applyPropertiesToWidgets(this);
+        this.__DA_refreshWidgets?.();
 		
 		if (this.graph && !this.__DA_graphChangeHandler) {
 			const onGraphChange = () => {
-				if (!this.__DA_syncDisabled) {
+                if (!this.__DA_syncDisabled && !this.__DA_isInitializing) {
 					this.syncTogglesWithGraph?.();
 				}
 			};
 			this.__DA_graphChangeHandler = onGraphChange;
 			this.graph.on('change', onGraphChange);
-		}
-	};
+        }
+
+        setTimeout(() => {
+            this.__DA_isInitializing = false;
+            applyPropertiesToWidgets(this);
+            this.__DA_refreshWidgets?.();
+            this.setDirtyCanvas?.(true, true);
+        }, 150);
+    };
 
     const originalOnConfigure = nodeType.prototype.onConfigure;
     nodeType.prototype.onConfigure = function () {
+		this.__DA_isInitializing = true;
         originalOnConfigure?.apply(this, arguments);
         this.__DA_sanitizeWidgets?.();
-        if (this.properties) {
-            getAllTrackedWidgets(this).forEach((widget) => {
-                if (widget.name && this.properties[widget.name] !== undefined) {
-                    const saved = this.properties[widget.name];
-                    if (widget.value !== saved) widget.value = saved;
-                }
-            });
-        }
-        setTimeout(() => this.__DA_refreshWidgets?.(), 0);
+        // Instantly apply properties during configuration
+        applyPropertiesToWidgets(this);
+        setTimeout(() => {
+			this.__DA_refreshWidgets?.();
+            this.__DA_isInitializing = false;
+        }, 150);
     };
 
     const originalMenu = nodeType.prototype.getExtraMenuOptions;
@@ -900,7 +901,7 @@ const extendNodePrototype = (nodeType, nodeData) => {
         const compact = !!this.properties?._DA_compactMode;
         options.push({
             content: compact ? "🚦DA_NodeController: Full mode" : "🚦DA_NodeController: Compact mode",
-            callback: () => this.__DA_toggleCompactMode?.(!compact, { force: true }),
+            callback: () => this.__DA_toggleCompactMode?.(!compact),
         });
     };
 };
@@ -911,4 +912,33 @@ app.registerExtension({
         if (!nodeData || nodeData.name !== "DA_NodeController") return;
         extendNodePrototype(nodeType, nodeData);
     },
+	async loadedGraph() {
+        // Automatic treatment when switching tabs/graphs (if the load/focus hook is triggered)
+        setTimeout(() => {
+            const graphs = getAllGraphs(app.graph);
+            graphs.forEach(g => {
+                getGraphNodes(g).forEach(n => {
+                    if (n.type === "DA_NodeController") {
+                        n.__DA_isInitializing = false;
+                        applyPropertiesToWidgets(n);
+                        n.__DA_refreshWidgets?.();
+                    }
+                });
+            });
+        }, 200);
+    }
 });
+
+// Global interceptor of click events on a document/tabs to force update a node if it “breaks up”
+window.addEventListener("click", () => {
+    if (!app.graph) return;
+    const graphs = getAllGraphs(app.graph);
+    graphs.forEach(g => {
+        getGraphNodes(g).forEach(n => {
+            if (n.type === "DA_NodeController" && n.properties) {
+                applyPropertiesToWidgets(n);
+                n.__DA_refreshWidgets?.();
+            }
+        });
+    });
+}, { passive: true });
