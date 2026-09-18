@@ -33,6 +33,7 @@ const applyWidgetHiddenState = (widget, hidden) => {
     if (!widget) return;
     widget.hidden = hidden;
     widget.__DG_visible = !hidden;
+	ensureHiddenAwareWidget(widget);
 };
 
 const trackWidgetMetadata = (node, widget) => {
@@ -48,6 +49,7 @@ const trackWidgetMetadata = (node, widget) => {
         widget.__DG_visible = widget.__DG_visible !== false;
         node.__DG_allWidgets.push(widget);
     }
+	ensureHiddenAwareWidget(widget);
     return widget;
 };
 
@@ -197,7 +199,6 @@ const getNodesInGroup = (graph, groupName) => {
 };
 
 // --- Helper functions for graphs ---
-
 const getAllGraphs = (root) => {
     const seen = new Set();
     const result = [];
@@ -491,7 +492,6 @@ const refreshWidgets = function () {
             }
         });
     }
-    getAllTrackedWidgets(this).ensureHiddenAwareWidget;
     const slotCount = clampInt(getWidget(this, "slot_count")?.value || 3);
     const isCompact = !!this.properties?._DG_compactMode;
     const mode = getWidget(this, "mode")?.value || "Bypass";
@@ -510,8 +510,8 @@ const refreshWidgets = function () {
         // and (full mode OR (compact mode AND showAllSwitch == true))
         const showButtons = (restriction === "default") && (slotCount > 1) &&
                             (!isCompact || showAllSwitch);
-        noneBtn.hidden = !showButtons;
-        allBtn.hidden = !showButtons;
+        applyWidgetHiddenState(noneBtn, !showButtons);
+        applyWidgetHiddenState(allBtn, !showButtons);
     }
 
     // ---- Visibility of show_AllSwitch itself (only in full mode) ----
@@ -561,12 +561,11 @@ const refreshWidgets = function () {
 
     // ---- Single slot: hide buttons and show_AllSwitch ----
     if (slotCount <= 1) {
-        if (noneBtn) noneBtn.hidden = true;
-        if (allBtn) allBtn.hidden = true;
-        if (showAllSwitchWidget) showAllSwitchWidget.hidden = true;
+        if (noneBtn) applyWidgetHiddenState(noneBtn, true);
+        if (allBtn) applyWidgetHiddenState(allBtn, true);
+        if (showAllSwitchWidget) applyWidgetHiddenState(showAllSwitchWidget, true);
     }
 
-    this.setDirtyCanvas?.(true, true);
     this.__DG_syncWidgetVisibility?.();
     syncWidgetBackedInputVisibility(this);
     this.__DG_updateAutoHeight?.();
@@ -605,7 +604,6 @@ const syncTogglesWithGraph = function () {
 
     const graph = app.graph;
     if (!graph) { this._DG_syncingToggles = false; return; }
-    const groups = graph.groups || [];
 
     for (let slot = 1; slot <= slotCount; slot++) {
         const switchWidget = getWidget(this, `switch_${slot}`);
