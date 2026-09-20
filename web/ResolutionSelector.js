@@ -88,20 +88,29 @@ app.registerExtension({
                 const infoPresetWidget = createInfoWidget("info_preset");
                 const infoMpWidget = createInfoWidget("info_mp");
 
-                const resolutionsMap = { "144p": 144, "240p": 240, "360p": 360, "480p": 480, "720p": 720, "1080p": 1080, "1440p": 1440, "2160p (4K)": 2160 };
+                const resolutionsTotalPixels = {
+					"144p":  25600,   // 256x144
+					"240p":  76800,   // 426x240
+					"360p":  230400,  // 640x360
+					"480p":  407808,  // 854x480
+					"720p":  921600,  // 1280x720
+					"1080p": 2073600, // 1920x1080
+					"1440p": 3686400, // 2560x1440
+					"2160p (4K)": 8294400 // 3840x2160
+				};
 
-                const calculatePresetSize = (curW, curH, presetName) => {
-                    const targetHeight = resolutionsMap[presetName] || 1080;
-                    const aspect = curW / (curH || 1);
-                    if (curH > curW) {
-                        const targetWidth = targetHeight;
-                        const pH = Math.round(targetWidth / aspect);
-                        return [targetWidth, pH];
-                    } else {
-                        const pW = Math.round(targetHeight * aspect);
-                        return [pW, targetHeight];
-                    }
-                };
+				const calculatePresetSize = (curW, curH, presetName) => {
+					const targetPixels = resolutionsTotalPixels[presetName] || 2073600;
+					const currentPixels = (curW * curH) || 1;
+					
+					// Area scaling factor
+					const scaleFactor = Math.sqrt(targetPixels / currentPixels);
+					
+					const pW = Math.round(curW * scaleFactor);
+					const pH = Math.round(curH * scaleFactor);
+					
+					return [pW, pH];
+				};
 
                 const refreshUIValues = () => {
                     const curW = Math.round(widthWidget.value || 0);
