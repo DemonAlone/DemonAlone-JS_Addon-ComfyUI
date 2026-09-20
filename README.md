@@ -15,6 +15,8 @@ This node is deprecated and will be removed in the future. Please use **Video Ma
 * **DA_NodeController** **DA_GroupController**  are based on **AUNMultiUniversal** from [AUN-ComfyUI-Nodes](https://github.com/loz2754/AUN-ComfyUI-Nodes). **DA_GroupController** has some features from feature_group_fast_toggle.js by **rgthree**.
 
 * Used the hint from  [ComfyUI-MyLoadVideo](https://github.com/1123156819/comfyui-myloadvideo) for getting a list of video previews for  **load_video_nodes2**.
+
+* **DA_ResolutionSelector** inspired but **not** based  on **Comfyui-Resolution-Master** from Comfyui-Resolution-Master](https://github.com/Azornes/Comfyui-Resolution-Master).
    
 
 * Created with the assistance of **Google Gemini/Gemma**, **Qwen**, **DeepSeek**.
