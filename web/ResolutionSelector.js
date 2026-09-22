@@ -29,8 +29,9 @@ app.registerExtension({
                 const widthWidget = node.widgets.find(w => w.name === "width");
                 const heightWidget = node.widgets.find(w => w.name === "height");
                 const stepWidget = node.widgets.find(w => w.name === "step_size");
+				const presetWidget = node.widgets.find(w => w.name === "resolution_preset");
+				const priorityWidget = node.widgets.find(w => w.name === "priority_mode");
                 const multWidget = node.widgets.find(w => w.name === "scale_mult");
-                const presetWidget = node.widgets.find(w => w.name === "scale_preset");
                 const mpWidget = node.widgets.find(w => w.name === "scale_mp");
                 const alignWidget = node.widgets.find(w => w.name === "align_to_step");
 
@@ -64,7 +65,28 @@ app.registerExtension({
 
                 updateSteps();
 
-                // Function to create informational DOM widget
+                // Auxiliary functions for checking toggle switches and steps
+                const getStepValue = () => {
+                    if (alignWidget && alignWidget.value === false) return 1;
+                    return parseInt(stepWidget.value) || 1;
+                };
+
+                const isStrictStepMode = () => {
+                    return priorityWidget && priorityWidget.value && priorityWidget.value.includes("Strict Step");
+                };
+
+                // Hard fitting method taking into account priority mode
+                const applyConstraints = (w, h) => {
+                    let rw = Math.round(w);
+                    let rh = Math.round(h);
+                    const step = getStepValue();
+                    if (isStrictStepMode() && step > 1) {
+                        rw = Math.round(rw / step) * step;
+                        rh = Math.round(rh / step) * step;
+                    }
+                    return [Math.max(64, Math.min(32768, rw)), Math.max(64, Math.min(32768, rh))];
+                };
+
                 const createInfoWidget = (name) => {
                     const div = document.createElement("div");
                     div.style.width = "100%";
@@ -82,70 +104,52 @@ app.registerExtension({
                     return widget;
                 };
 
-                // Create 4 separate blocks
+                // Create 3 separate blocks
                 const infoMainWidget = createInfoWidget("info_main");
                 const infoMultWidget = createInfoWidget("info_mult");
-                const infoPresetWidget = createInfoWidget("info_preset");
                 const infoMpWidget = createInfoWidget("info_mp");
 
-                const resolutionsTotalPixels = {
-					"144p":  25600,   // 256x144
-					"240p":  76800,   // 426x240
-					"360p":  230400,  // 640x360
-					"480p":  407808,  // 854x480
-					"720p":  921600,  // 1280x720
-					"1080p": 2073600, // 1920x1080
-					"1440p": 3686400, // 2560x1440
-					"2160p (4K)": 8294400 // 3840x2160
-				};
-
-				const calculatePresetSize = (curW, curH, presetName) => {
-					const targetPixels = resolutionsTotalPixels[presetName] || 2073600;
-					const currentPixels = (curW * curH) || 1;
-					
-					// Area scaling factor
-					const scaleFactor = Math.sqrt(targetPixels / currentPixels);
-					
-					const pW = Math.round(curW * scaleFactor);
-					const pH = Math.round(curH * scaleFactor);
-					
-					return [pW, pH];
-				};
+                // Dictionary of fixed resolutions from presets
+                const presetResolutions = {
+                    "1:1 Square (1024×1024)": [1024, 1024],
+                    "3:4 Portrait (768×1024)": [768, 1024],
+                    "4:5 Portrait (915×1144)": [915, 1144],
+                    "5:12 Portrait (640×1536)": [640, 1536],
+                    "7:9 Portrait (896×1152)": [896, 1152],
+                    "9:16 Portrait (768×1344)": [768, 1344],
+                    "13:19 Portrait (832×1216)": [832, 1216],
+                    "3:2 Landscape (1254×836)": [1254, 836],
+                    "4:3 Landscape (1024×768)": [1024, 768],
+                    "16:9 Landscape (1344×768)": [1344, 768],
+                    "21:9 Landscape (1536×640)": [1536, 640]
+                };
 
                 const refreshUIValues = () => {
                     const curW = Math.round(widthWidget.value || 0);
                     const curH = Math.round(heightWidget.value || 0);
                     const mp = ((curW * curH) / 1000000).toFixed(2);
-                    const pVal = Math.min(curW, curH);
 
                     // 1. Update main info block
                     if (infoMainWidget.element) {
-                        infoMainWidget.element.textContent = `${curW} × ${curH} | ${mp} MP (${pVal}p)`;
+                        infoMainWidget.element.textContent = `${curW} × ${curH} | ${mp} MP`;
                     }
 
                     // 2. Update multiplier info block
                     const m = multWidget ? multWidget.value : 1.3;
-                    const p1W = Math.round(curW * m);
-                    const p1H = Math.round(curH * m);
+                    const [p1W, p1H] = applyConstraints(curW * m, curH * m);
+					const p1Mp = ((p1W * p1H) / 1000000).toFixed(2);
                     if (infoMultWidget.element) {
-                        infoMultWidget.element.textContent = `Preview -> Mult: ${p1W}×${p1H}`;
+                        infoMultWidget.element.textContent = `Preview -> Mult: ${p1W}×${p1H} (${p1Mp} MP)`;
                     }
 
-                    // 3. Update preset info block
-                    const pName = presetWidget ? presetWidget.value : "1080p";
-                    const [p2W, p2H] = calculatePresetSize(curW, curH, pName);
-                    if (infoPresetWidget.element) {
-                        infoPresetWidget.element.textContent = `Preview -> Preset (${pName}): ${p2W}×${p2H}`;
-                    }
-
-                    // 4. Update megapixels info block
+                    // 3. Update megapixels info block
                     const targetMP = mpWidget ? mpWidget.value : 1.0;
                     const currentMP = (curW * curH) / 1000000;
                     const scaleFactor = currentMP > 0 ? Math.sqrt(targetMP / currentMP) : 1;
-                    const p3W = Math.round(curW * scaleFactor);
-                    const p3H = Math.round(curH * scaleFactor);
+                    const [p3W, p3H] = applyConstraints(curW * scaleFactor, curH * scaleFactor);
+					const p3Mp = ((p3W * p3H) / 1000000).toFixed(2);
                     if (infoMpWidget.element) {
-                        infoMpWidget.element.textContent = `Preview -> MP (${targetMP}MP): ${p3W}×${p3H}`;
+                        infoMpWidget.element.textContent = `Preview -> MP (${targetMP}MP): ${p3W}×${p3H} (${p3Mp} MP)`;
                     }
                 };
 
@@ -161,7 +165,22 @@ app.registerExtension({
                     refreshUIValues();
                 };
 
-                [widthWidget, heightWidget, multWidget, presetWidget, mpWidget].forEach(w => {
+                // Apply the preset taking into account the priority mode
+                if (presetWidget) {
+                    const origPresetCb = presetWidget.callback;
+                    presetWidget.callback = function(v) {
+                        if (origPresetCb) origPresetCb.apply(this, arguments);
+                        if (presetResolutions[v]) {
+                            const [resW, resH] = presetResolutions[v];
+                            const [finalW, finalH] = applyConstraints(resW, resH);
+                            commitValue(widthWidget, finalW);
+                            commitValue(heightWidget, finalH);
+                            node.setDirtyCanvas(true, true);
+                        }
+                    };
+                }
+
+                [widthWidget, heightWidget, multWidget, mpWidget, priorityWidget, alignWidget, stepWidget].forEach(w => {
                     if (w) {
                         const oldCb = w.callback;
                         w.callback = function(v) {
@@ -172,7 +191,7 @@ app.registerExtension({
                 });
 
                 // Create buttons
-                const btnReadResolution = node.addWidget("button", "Read Resolution", null, () => {
+                const btnReadResolution = node.addWidget("button", "Read Image Resolution", null, () => {
                     const imageInputIndex = node.inputs ? node.inputs.findIndex(i => i.name === "image") : -1;
                     if (imageInputIndex === -1) return;
 
@@ -182,14 +201,16 @@ app.registerExtension({
                         const originNode = app.graph.getNodeById(link.origin_id);
                         if (originNode) {
                             if (originNode.imgs && originNode.imgs.length > 0 && originNode.imgs[0].naturalWidth) {
-                                commitValue(widthWidget, originNode.imgs[0].naturalWidth);
-                                commitValue(heightWidget, originNode.imgs[0].naturalHeight);
+                                const [fw, fh] = applyConstraints(originNode.imgs[0].naturalWidth, originNode.imgs[0].naturalHeight);
+                                commitValue(widthWidget, fw);
+                                commitValue(heightWidget, fh);
                             } else {
                                 const origW = originNode.widgets?.find(w => w.name === "width" || w.name === "image_width")?.value;
                                 const origH = originNode.widgets?.find(w => w.name === "height" || w.name === "image_height")?.value;
                                 if (origW && origH) {
-                                    commitValue(widthWidget, origW);
-                                    commitValue(heightWidget, origH);
+                                    const [fw, fh] = applyConstraints(origW, origH);
+                                    commitValue(widthWidget, fw);
+                                    commitValue(heightWidget, fh);
                                 }
                             }
                             node.setDirtyCanvas(true, true);
@@ -198,29 +219,21 @@ app.registerExtension({
                 });
 
                 const btnSwap = node.addWidget("button", "Swap Width / Height", null, () => {
-                    const wVal = Math.round(widthWidget.value);
-                    const hVal = Math.round(heightWidget.value);
-                    commitValue(widthWidget, hVal);
-                    commitValue(heightWidget, wVal);
+                    const [fw, fh] = applyConstraints(heightWidget.value, widthWidget.value);
+                    commitValue(widthWidget, fw);
+                    commitValue(heightWidget, fh);
                     node.setDirtyCanvas(true, true);
                 });
 
+                // Apply buttons now use the same applyConstraints logic as previews
                 const btnApplyMult = node.addWidget("button", "Apply Multiplier", null, () => {
                     const m = multWidget ? multWidget.value : 1.0;
-                    const newW = Math.max(64, Math.min(32768, Math.round(widthWidget.value * m)));
-                    const newH = Math.max(64, Math.min(32768, Math.round(heightWidget.value * m)));
-                    commitValue(widthWidget, newW);
-                    commitValue(heightWidget, newH);
+                    const [fw, fh] = applyConstraints(widthWidget.value * m, heightWidget.value * m);
+                    commitValue(widthWidget, fw);
+                    commitValue(heightWidget, fh);
                     node.setDirtyCanvas(true, true);
                 });
 
-                const btnApplyPreset = node.addWidget("button", "Apply Preset Height", null, () => {
-                    const pName = presetWidget ? presetWidget.value : "1080p";
-                    const [pW, pH] = calculatePresetSize(widthWidget.value, heightWidget.value, pName);
-                    commitValue(widthWidget, Math.max(64, Math.min(32768, pW)));
-                    commitValue(heightWidget, Math.max(64, Math.min(32768, pH)));
-                    node.setDirtyCanvas(true, true);
-                });
 
                 const btnApplyMp = node.addWidget("button", "Apply Megapixels (MP)", null, () => {
                     const targetMP = mpWidget ? mpWidget.value : 1.0;
@@ -228,8 +241,9 @@ app.registerExtension({
                     const curH = heightWidget.value;
                     const currentMP = (curW * curH) / 1000000;
                     const scaleFactor = currentMP > 0 ? Math.sqrt(targetMP / currentMP) : 1;
-                    commitValue(widthWidget, Math.max(64, Math.min(32768, Math.round(curW * scaleFactor))));
-                    commitValue(heightWidget, Math.max(64, Math.min(32768, Math.round(curH * scaleFactor))));
+                    const [fw, fh] = applyConstraints(curW * scaleFactor, curH * scaleFactor);
+                    commitValue(widthWidget, fw);
+                    commitValue(heightWidget, fh);
                     node.setDirtyCanvas(true, true);
                 });
 
@@ -239,14 +253,13 @@ app.registerExtension({
                     widthWidget,        // 2. Width
                     heightWidget,       // 3. Height
                     stepWidget,         // 4. Step size
-                    alignWidget,        // (Additionally keep align_to_step next to step)
-                    btnSwap,            // 5. Swap width/height
-                    infoMultWidget,     // 6. Multiplier info line
-                    multWidget,         // 7. Scale_mult
-                    btnApplyMult,       // 8. Apply multiplier button
-                    infoPresetWidget,   // 9. Preset info
-                    presetWidget,       // 10. Scale_preset
-                    btnApplyPreset,     // 11. Apply preset height button
+                    alignWidget,        // 5. (Additionally keep align_to_step next to step)
+                    priorityWidget,     // 6.
+                    btnSwap,            // 7. Swap width/height
+					presetWidget,       // 8.
+                    infoMultWidget,     // 9. Multiplier info line
+                    multWidget,         // 10. Scale_mult
+                    btnApplyMult,       // 11. Apply multiplier button
                     infoMpWidget,       // 12. MP info
                     mpWidget,           // 13. Scale_mp
                     btnApplyMp,         // 14. Megapixels button
@@ -254,7 +267,7 @@ app.registerExtension({
                 ].filter(Boolean);
 
                 refreshUIValues();
-                node.setSize([MIN_WIDTH, MIN_HEIGHT]);
+                node.setSize([MIN_WIDTH, MIN_HEIGHT + 30]);
             };
         }
     }
