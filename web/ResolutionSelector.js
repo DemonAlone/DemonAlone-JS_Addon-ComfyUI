@@ -175,7 +175,11 @@ app.registerExtension({
                             const [finalW, finalH] = applyConstraints(resW, resH);
                             commitValue(widthWidget, finalW);
                             commitValue(heightWidget, finalH);
-                            node.setDirtyCanvas(true, true);
+							// Reset the selector value back to 'Custom / None'
+                            setTimeout(() => {
+                                commitValue(presetWidget, "Custom / None");
+                                node.setDirtyCanvas(true, true);
+                            }, 50);
                         }
                     };
                 }
