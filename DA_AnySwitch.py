@@ -13,6 +13,10 @@ class DA_AnySwitch:
     RETURN_NAMES = ("output",)
     FUNCTION = "switch"
     CATEGORY = "utils/switch"
+    DESCRIPTION = (
+        "A dynamic routing node that automatically detects the first active input and forwards its data to the output while dynamically resizing input slots as connections are made or removed."
+        "It intelligently infers the output type from the connected inputs, enabling flexible logic flow for scenarios like conditional latent selection in workflows."
+    )
 
     def switch(self, **kwargs):
         # for the first filled input
