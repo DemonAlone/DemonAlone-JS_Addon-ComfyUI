@@ -17,6 +17,8 @@ This node is deprecated and will be removed in the future. Please use **Video Ma
 * Used the hint from  [ComfyUI-MyLoadVideo](https://github.com/1123156819/comfyui-myloadvideo) for getting a list of video previews for  **load_video_nodes2**.
 
 * **DA_ResolutionSelector** inspired but **not** based  on **Comfyui-Resolution-Master** from Comfyui-Resolution-Master](https://github.com/Azornes/Comfyui-Resolution-Master).
+
+* **DA_AnySwitch**  inspired but **not** based  on **AnySwitch** by **rgthree**.
    
 
 * Created with the assistance of **Google Gemini/Gemma**, **Qwen**, **DeepSeek**.
