@@ -39,23 +39,39 @@ app.registerExtension({
 });
 
 function updateOutputType(node) {
-    // Find the first connected input and set its type on the output
     let activeType = "*";
+    
+    // 1. Find the first connected input and determine its type
     for (let inp of node.inputs) {
         if (inp.link !== null) {
-            // Get the data type from the linked slot
             let link = app.graph.links[inp.link];
             if (link) {
                 let originNode = app.graph.getNodeById(link.origin_id);
-                let originSlot = originNode.outputs[link.origin_slot];
-                activeType = originSlot.type;
-                break;
+                if (originNode && originNode.outputs && originNode.outputs[link.origin_slot]) {
+                    let originSlot = originNode.outputs[link.origin_slot];
+                    activeType = originSlot.type;
+                    break;
+                }
             }
         }
     }
-    // Change the output type of the node
-    if (node.outputs && node.outputs[0]) {
-        node.outputs[0].type = activeType;
-        node.outputs[0].name = activeType; //  Optional for visualization
+
+    // 2. If an output exists, update its type and display name
+	if (node.outputs && node.outputs[0]) {
+        let output = node.outputs[0];
+        
+        if (output.type !== activeType) {
+            output.type = activeType;
+			// Update the name and label if the engine supports both fields
+            output.name = activeType;
+            output.label = activeType; 
+            
+            // Recalculate the node's dimensions in the new UI
+            if (typeof node.computeSize === "function") {
+                node.size = node.computeSize();
+            }
+            
+            node.setDirtyCanvas(true, true);
+        }
     }
 }
