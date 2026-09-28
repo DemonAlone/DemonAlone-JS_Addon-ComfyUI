@@ -24,7 +24,7 @@ class DA_ResolutionSelector:
                 "width": ("INT", {"default": 1024, "min": 64, "max": 32768, "step": 1}),
                 "height": ("INT", {"default": 1024, "min": 64, "max": 32768, "step": 1}),
                 "step_size": ([str(x) for x in s.STEPS_LIST], {"default": "16", "tooltip": "Divisor to snap dimensions to a multiple of this value (e.g., 16)."}),
-                "resolution_preset": (s.RESOLUTION_PRESETS, {"default": "1:1 Square (1024×1024)", "tooltip": "Quick base resolution preset."}),
+                "resolution_preset": (s.RESOLUTION_PRESETS, {"default": "Custom / None", "tooltip": "Quick base resolution preset."}),
                 "priority_mode": (["Strict Step (Snap to Grid)", "Strict Aspect (Preserve Ratio)"], {"default": "Strict Step (Snap to Grid)", "tooltip": "Choose whether step alignment or exact aspect ratio takes precedence."}),
                 "scale_mult": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 4.0, "step": 0.1, "tooltip": "Uniform multiplier applied directly to width and height."}),
                 "scale_mp": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 16.0, "step": 0.1, "tooltip": "Target megapixel count."}),
