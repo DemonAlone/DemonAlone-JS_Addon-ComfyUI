@@ -10,10 +10,12 @@ app.registerExtension({
             // Function to check and add new inputs when needed
             const checkInputs = () => {
                 let inputs = node.inputs;
-                let lastInput = inputs[inputs.length - 1];
+				if (!inputs || inputs.length === 0) return;
                 
-                // If the last input is occupied (linked), add the next one
-                if (lastInput && lastInput.link !== null) {
+                let lastSlotIndex = inputs.length - 1;
+                
+                // Using the modern node.getInputLink method instead of directly inspecting .link
+                if (node.getInputLink(lastSlotIndex) !== null) {
                     let newIndex = inputs.length + 1;
                     node.addInput(`input_${newIndex}`, "*");
                 }
@@ -26,8 +28,8 @@ app.registerExtension({
                     originalOnConnectionsChange.apply(this, arguments);
                 }
                 
-                // Check if the node needs to grow when connecting to an input slot
-                if (type === 1) { // 1 usually means Input in the new API
+                // 1 means INPUT in ComfyUI / LiteGraph API
+                if (type === 1) { 
                     checkInputs();
                 }
                 
@@ -41,10 +43,13 @@ app.registerExtension({
 function updateOutputType(node) {
     let activeType = "*";
     
+	if (!node.inputs) return;
     // 1. Find the first connected input and determine its type
-    for (let inp of node.inputs) {
-        if (inp.link !== null) {
-            let link = app.graph.links[inp.link];
+	for (let slotIndex = 0; slotIndex < node.inputs.length; slotIndex++) {
+        let linkId = node.getInputLink(slotIndex); // Securely obtaining a link ID
+        
+        if (linkId !== null && linkId !== undefined) {
+            let link = app.graph.links[linkId];
             if (link) {
                 let originNode = app.graph.getNodeById(link.origin_id);
                 if (originNode && originNode.outputs && originNode.outputs[link.origin_slot]) {
