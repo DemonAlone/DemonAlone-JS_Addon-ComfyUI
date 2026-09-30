@@ -80,20 +80,43 @@ const ensureWidgetTracking = (node) => {
 
 const getAllTrackedWidgets = (node) => node?.__DA_allWidgets || node?.widgets || [];
 
+// --- FIXED: Safe connection check via slot index ---
 const hasNamedConnectedConvertedInput = (node, widgetName) => {
     if (!node || !widgetName) return false;
     const inputs = Array.isArray(node.inputs) ? node.inputs : [];
-    return inputs.some((input) => input?.name === widgetName && input.widget && input.link != null);
+    return inputs.some((input, index) => {
+        if (input?.name !== widgetName || !input.widget) return false;
+		// Use new API V2 core methods instead of direct .link != null
+        if (typeof node.isInputConnected === "function") {
+            return node.isInputConnected(index);
+        }
+        if (typeof node.getInputLink === "function") {
+            return node.getInputLink(index) != null;
+        }
+        return input.link != null; // Fallback for very old environments
+    });
 };
 
+// --- FIXED: Safe reading of links in the synchronization loop ---
 const syncWidgetBackedInputVisibility = (node) => {
     if (!node) return;
     const inputs = Array.isArray(node.inputs) ? node.inputs : [];
-    inputs.forEach((input) => {
+    inputs.forEach((input, index) => {
         if (!input?.widget) return;
+        
+        // Determine whether the input is connected using modern API V2 methods
+        let isConnected = false;
+        if (typeof node.isInputConnected === "function") {
+            isConnected = node.isInputConnected(index);
+        } else if (typeof node.getInputLink === "function") {
+            isConnected = node.getInputLink(index) != null;
+        } else {
+            isConnected = input.link != null;
+        }
+
         const hidden = !!input.widget.hidden;
         input.hidden = hidden;
-        input.disabled = hidden && input.link == null;
+        input.disabled = hidden && !isConnected;
         // --- Added: make input optional ---
 		input.optional = true;
         if (hidden) {
