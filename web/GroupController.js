@@ -81,27 +81,48 @@ const ensureWidgetTracking = (node) => {
 
 const getAllTrackedWidgets = (node) => node?.__DG_allWidgets || node?.widgets || [];
 
+// --- FIXED: Secure polling of connections via indexes in API V2 ---
 const hasNamedConnectedConvertedInput = (node, widgetName) => {
     if (!node || !widgetName) return false;
     const inputs = Array.isArray(node.inputs) ? node.inputs : [];
-    return inputs.some((input) => input?.name === widgetName && input.widget && input.link != null);
+    return inputs.some((input, index) => {
+        if (input?.name !== widgetName || !input.widget) return false;
+        if (typeof node.isInputConnected === "function") {
+            return node.isInputConnected(index);
+        }
+        if (typeof node.getInputLink === "function") {
+            return node.getInputLink(index) != null;
+        }
+        return input.link != null;
+    });
 };
 
+// --- FIXED: Safe reading of links when hiding/showing slots ---
 const syncWidgetBackedInputVisibility = (node) => {
     if (!node) return;
     const inputs = Array.isArray(node.inputs) ? node.inputs : [];
-    inputs.forEach((input) => {
+    inputs.forEach((input, index) => {
         if (!input?.widget) return;
+
+        let isConnected = false;
+        if (typeof node.isInputConnected === "function") {
+            isConnected = node.isInputConnected(index);
+        } else if (typeof node.getInputLink === "function") {
+            isConnected = node.getInputLink(index) != null;
+        } else {
+            isConnected = input.link != null;
+        }
+
         const hidden = !!input.widget.hidden;
         input.hidden = hidden;
-        input.disabled = hidden && input.link == null;
+        input.disabled = hidden && !isConnected;
         input.optional = true;
         if (hidden) {
             input.required = false;
             if (input.__DG_savedType == null) {
                 input.__DG_savedType = input.type;
             }
-            if (input.link == null) {
+            if (!isConnected) {
                 input.type = "__DG_HIDDEN__";
             }
         } else {
