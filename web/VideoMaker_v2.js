@@ -62,14 +62,16 @@ app.registerExtension({
 			// We return a regular array, so extract path from message.filename if available,
 			// or fallback to the standard mechanism or pass through UI.
             if (message && message.filename) {
-                const path = message.filename[0]; // usually returned as an array in ComfyUI
-                updateVideoPreview(node, path);
+                // Extract the path string (since on the backend we packed the path into the [relative_path] array)
+                const path = Array.isArray(message.filename) ? message.filename[0] : message.filename;
+                const dirType = (message.type && Array.isArray(message.type)) ? message.type[0] : (message.type || 'temp');
+                updateVideoPreview(node, path, dirType);
             }
         };
     }
 });
 
-function updateVideoPreview(node, path) {
+function updateVideoPreview(node, path, dirType) {
     if (!node.videoEl) return;
     
     const parts = path.split('/');
@@ -78,7 +80,7 @@ function updateVideoPreview(node, path) {
     
     const params = new URLSearchParams({
         filename: filename,
-        type: 'output',
+        type: dirType, // 'temp' or 'output' will be substituted here depending on the backend
         ...(subfolder && { subfolder: subfolder }),
         t: Date.now()
     });
@@ -92,5 +94,5 @@ function updateVideoPreview(node, path) {
     }
     
     node.setDirtyCanvas(true, true);
-    console.log("[VideoMakerV2] Preview updated for node id:", node.id);
+    console.log(`[VideoMakerV2] Preview updated from ${dirType} for node id:`, node.id);
 }
