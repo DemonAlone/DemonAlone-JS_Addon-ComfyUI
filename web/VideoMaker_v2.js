@@ -94,5 +94,5 @@ function updateVideoPreview(node, path, dirType) {
     }
     
     node.setDirtyCanvas(true, true);
-    console.log(`[VideoMakerV2] Preview updated from ${dirType} for node id:`, node.id);
+	console.log("[VideoMakerV2] Preview updated. Directory type:", dirType, "Node ID:", node.id);
 }
