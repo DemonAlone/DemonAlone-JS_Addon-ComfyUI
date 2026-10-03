@@ -26,15 +26,30 @@ function formatPrompt(text) {
     result = replaceBracketsWithWeight(result, "(", ")", WEIGHT_FACTOR);
     result = replaceBracketsWithWeight(result, "[", "]", NEG_FACTOR);
 
-    // 4. Add a space after comma/period only if followed strictly by a letter or a digit
-    result = result.replace(/([.,])([a-zA-Zа-яА-Я0-9])/g, "$1 $2");
-	
+	// 4. Add a space after comma/period only if followed strictly by a letter or a digit
+	// Protecting any decimals (in both :1.2 ​​and 1.5m scales) by checking the symbols around
+	result = result.replace(/([.,])([a-zA-Zа-яА-Я0-9])/g, (match, punct, nextChar, offset, string) => {
+		const prevChar = string[offset - 1]; // symbol before period/comma
+		
+		// If there is a number on the left and a number on the right, it is a fraction skip the replacement.
+		if (/\d/.test(prevChar) && /\d/.test(nextChar)) {
+			return match;
+		}
+		
+		// In all other cases, add a space
+		return punct + " " + nextChar;
+	});
+
 	// 5. Remove spaces immediately after opening parentheses/brackets and before closing
     result = result.replace(/\(\s+/g, '(');
     result = result.replace(/\s+\)/g, ')');
     result = result.replace(/\[\s+/g, '[');
     result = result.replace(/\s+\]/g, ']');
-	
+
+	//5.1 collapse random gaps inside the weight structures: 1. 2 -> :1.2
+	result = result.replace(/(?<=:)\s*(\d+)\s*\.\s*(\d+)/g, "$1.$2"); 
+	result = result.replace(/\s*:\s*(?=\d)/g, ":"); 
+
 	// 6. Remove spaces before punctuation marks (periods and commas)
     result = result.replace(/\s+([.,])/g, "$1");
 
