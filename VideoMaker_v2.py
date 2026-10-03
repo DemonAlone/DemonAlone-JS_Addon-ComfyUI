@@ -5,6 +5,7 @@ import torch
 import numpy as np
 import folder_paths
 import av
+import comfy.utils
 
 class VideoMakerV2:
     NODE_NAME = "VideoMakerV2"
@@ -14,10 +15,11 @@ class VideoMakerV2:
             "required": {
                 "images": ("IMAGE",),
                 "fps": ("FLOAT", {"default": 24.0, "min": 1.0, "max": 60.0, "step": 0.01}),
+                "save_video": ("BOOLEAN", {"default": True, "label_on": "Save (Output)", "label_off": "Preview (Temp)"}),
                 "trim_audio": ("BOOLEAN", {"default": True, "label": "Trim audio to video length"})
             },
             "optional": {
-                "filename": ("STRING", {"default": "video", "tooltip": "Relative path inside `output`. Use %date% for date."}),
+                "filename": ("STRING", {"default": "video", "tooltip": "Relative path inside selected directory. Use %date% for date."}),
                 "use_date_mask": ("BOOLEAN", {"default": False, "label_on": "Custom Date", "label_off": "Default Date"}),
                 "custom_date_format": ("STRING", {"default": "yyyy-mm-dd", "tooltip": "Date format if custom mask is enabled"}),
                 "audio": ("AUDIO",)   
@@ -30,11 +32,17 @@ class VideoMakerV2:
     CATEGORY = "video"
     OUTPUT_NODE = True
     DESCRIPTION = (
-            "Generates MP4 videos from image batches with server-side PyAV encoding, supporting high audio bitrates and reliable background processing."
+            "Generates MP4 videos from image batches with server-side PyAV encoding. Supports saving to permanent output or temporary directory."
     )
 
-    def make_video(self, images, fps, trim_audio, audio=None, filename="video", use_date_mask=False, custom_date_format="yyyy-mm-dd"):
-        output_dir = folder_paths.get_output_directory()
+    def make_video(self, images, fps, save_video, trim_audio, audio=None, filename="video", use_date_mask=False, custom_date_format="yyyy-mm-dd"):
+        # Select a directory depending on save_video
+        if save_video:
+            base_dir = folder_paths.get_output_directory()
+            dir_type = "output"
+        else:
+            base_dir = folder_paths.get_temp_directory()
+            dir_type = "temp"
         
         # --- Date Logic ---
         current_date = datetime.datetime.now()
@@ -56,7 +64,7 @@ class VideoMakerV2:
         if os.path.isabs(safe_name) or safe_name.startswith(".."):
             safe_name = "video.mp4"
         
-        full_path = os.path.join(output_dir, safe_name)
+        full_path = os.path.join(base_dir, safe_name)
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
         
         # Prevent overwriting
@@ -116,8 +124,12 @@ class VideoMakerV2:
             audio_stream.layout = "stereo" if channels == 2 else "mono"
             audio_stream.bit_rate = 320000
 
+        # --- Initializing the Progress Bar ---
+        # Total number of steps = number of frames.
+        total_frames = len(images)
+        pbar = comfy.utils.ProgressBar(total_frames)
         # --- Writing Video Frames ---
-        for img_tensor in images:
+        for idx, img_tensor in enumerate(images):
             img_np = (img_tensor.cpu().numpy() * 255).astype(np.uint8)
             
             # Resize/crop if dimensions were adjusted to even numbers
@@ -127,6 +139,9 @@ class VideoMakerV2:
             frame = av.VideoFrame.from_ndarray(img_np, format="rgb24")
             for packet in video_stream.encode(frame):
                 container.mux(packet)
+            
+            # Update the progress bar on each frame
+            pbar.update_absolute(idx + 1, total_frames)
 
         # Flush video encoder
         for packet in video_stream.encode():
@@ -168,16 +183,30 @@ class VideoMakerV2:
 
         container.close()
         
-        relative_path = os.path.relpath(full_path, output_dir).replace("\\", "/")
-        print(f"[VideoMakerV2] Video successfully rendered on server: {relative_path}")
+        # Get the relative path of the selected folder
+        relative_path = os.path.relpath(full_path, base_dir).replace("\\", "/")
+        print(f"[VideoMakerV2] Video saved to {dir_type}: {relative_path}")
 
         last_frame = images[-1].unsqueeze(0)
         
-        # Returning via the ComfyUI UI dictionary — this ensures that the message 
-        # will arrive strictly at the node that was currently being executed, and not to any other!
+        # Divide the path into a file name and a subfolder for the standard ComfyUI format
+        parts = relative_path.split('/')
+        filename_only = parts[-1]
+        subfolder_only = '/'.join(parts[:-1]) if len(parts) > 1 else ""
+
+        ui_output = {
+            "filename": [relative_path],
+            "type": [dir_type]
+        }
+
+        ui_output["videos"] = [{
+            "filename": filename_only,
+            "subfolder": subfolder_only,
+            "type": dir_type,       # Pass 'temp' or 'output'
+            "format": "video/mp4"
+        }]
+        
         return {
-            "ui": {
-                "filename": [relative_path]
-            },
+            "ui": ui_output,
             "result": (last_frame,)
         }

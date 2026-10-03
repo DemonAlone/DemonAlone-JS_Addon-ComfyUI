@@ -35,7 +35,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DA_PlaySound": "DA_PlaySound",
     "DA_PromptFormatter": "Prompt Formatter",
     "LoadVideoNode": "Load Video [BETA]",
-    "LoadVideoNodes2": "Load Video (Nodes 2.0 only) [BETA]",
+    "LoadVideoNodes2": "Load Video (for Nodes 2.0) [BETA]",
     "PresetFloatNode": "Preset Float [BETA]",
     "PresetIntNode": "Preset Int [BETA]",
     "DA_ResolutionSelector": "Resolution Selector [BETA]",
