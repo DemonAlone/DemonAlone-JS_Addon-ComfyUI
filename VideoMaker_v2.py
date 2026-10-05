@@ -6,6 +6,7 @@ import numpy as np
 import folder_paths
 import av
 import comfy.utils
+import json
 
 class VideoMakerV2:
     NODE_NAME = "VideoMakerV2"
@@ -16,13 +17,18 @@ class VideoMakerV2:
                 "images": ("IMAGE",),
                 "fps": ("FLOAT", {"default": 24.0, "min": 1.0, "max": 60.0, "step": 0.01}),
                 "save_video": ("BOOLEAN", {"default": True, "label_on": "Save (Output)", "label_off": "Preview (Temp)"}),
+                "embed_workflow": ("BOOLEAN", {"default": True, "label_on": "Embed Workflow", "label_off": "No Workflow"}),
                 "trim_audio": ("BOOLEAN", {"default": True, "label": "Trim audio to video length"})
             },
             "optional": {
                 "filename": ("STRING", {"default": "video", "tooltip": "Relative path inside selected directory. Use %date% for date."}),
                 "use_date_mask": ("BOOLEAN", {"default": False, "label_on": "Custom Date", "label_off": "Default Date"}),
                 "custom_date_format": ("STRING", {"default": "yyyy-mm-dd", "tooltip": "Date format if custom mask is enabled"}),
-                "audio": ("AUDIO",)   
+                "audio": ("AUDIO",)
+            },
+            "hidden": {
+                "prompt": "PROMPT", 
+                "extra_pnginfo": "EXTRA_PNGINFO"
             }
         }
 
@@ -32,10 +38,10 @@ class VideoMakerV2:
     CATEGORY = "video"
     OUTPUT_NODE = True
     DESCRIPTION = (
-            "Generates MP4 videos from image batches with server-side PyAV encoding. Supports saving to permanent output or temporary directory."
+            "Generates MP4 videos from image batches with server-side PyAV encoding. Supports native workflow embedding, progress tracking, and saving to permanent output or temporary directory."
     )
 
-    def make_video(self, images, fps, save_video, trim_audio, audio=None, filename="video", use_date_mask=False, custom_date_format="yyyy-mm-dd"):
+    def make_video(self, images, fps, save_video, embed_workflow, trim_audio, audio=None, filename="video", use_date_mask=False, custom_date_format="yyyy-mm-dd", prompt=None, extra_pnginfo=None, **kwargs):
         # Select a directory depending on save_video
         if save_video:
             base_dir = folder_paths.get_output_directory()
@@ -81,8 +87,25 @@ class VideoMakerV2:
         enc_width = width if width % 2 == 0 else width - 1
         enc_height = height if height % 2 == 0 else height - 1
 
-        container = av.open(full_path, mode="w")
+        # correct flag movflags
+        container_options = {"movflags": "use_metadata_tags+faststart"}
         
+        # Open the container
+        container = av.open(full_path, mode="w", format="mp4", options=container_options)
+        
+        # --- Native metadata injection (Wrapped in toggle embed_workflow) ---
+        if embed_workflow:
+            if prompt is not None:
+                container.metadata["prompt"] = json.dumps(prompt, ensure_ascii=False)
+                
+            if extra_pnginfo is not None:
+                for key, value in extra_pnginfo.items():
+                    container.metadata[key] = json.dumps(value, ensure_ascii=False)
+                    
+            print(f"[VideoMakerV2] Workflow metadata successfully embedded into container.")
+        else:
+            print(f"[VideoMakerV2] Workflow embedding skipped by user request.")
+
         # Video stream setup
         video_stream = container.add_stream("libx264", rate=int(fps))
         video_stream.width = enc_width
@@ -107,7 +130,6 @@ class VideoMakerV2:
                 pass
             elif waveform.ndim == 1:
                 waveform = waveform.reshape(1, -1)
-                
             channels = waveform.shape[0]
             
             # Trimming audio to video length if requested
@@ -133,7 +155,7 @@ class VideoMakerV2:
             img_np = (img_tensor.cpu().numpy() * 255).astype(np.uint8)
             
             # Resize/crop if dimensions were adjusted to even numbers
-            if img_np.shape[0] != enc_height or img_np.shape[1] != enc_width:
+            if img_np.shape[1] != enc_width or img_np.shape[0] != enc_height:
                 img_np = img_np[:enc_height, :enc_width]
 
             frame = av.VideoFrame.from_ndarray(img_np, format="rgb24")
@@ -183,13 +205,13 @@ class VideoMakerV2:
 
         container.close()
         
-        # Get the relative path of the selected folder
+        # --- End of the injection block and return data to ComfyUI ---
         relative_path = os.path.relpath(full_path, base_dir).replace("\\", "/")
         print(f"[VideoMakerV2] Video saved to {dir_type}: {relative_path}")
 
         last_frame = images[-1].unsqueeze(0)
         
-        # Divide the path into a file name and a subfolder for the standard ComfyUI format
+        # Divide the path to generate a standard response in the Assets tab
         parts = relative_path.split('/')
         filename_only = parts[-1]
         subfolder_only = '/'.join(parts[:-1]) if len(parts) > 1 else ""
@@ -199,10 +221,11 @@ class VideoMakerV2:
             "type": [dir_type]
         }
 
+        # Register the video in the generation history (Assets)
         ui_output["videos"] = [{
             "filename": filename_only,
             "subfolder": subfolder_only,
-            "type": dir_type,       # Pass 'temp' or 'output'
+            "type": dir_type,   # Pass 'temp' or 'output'
             "format": "video/mp4"
         }]
         
