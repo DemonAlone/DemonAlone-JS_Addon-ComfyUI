@@ -19,6 +19,8 @@ This node is deprecated and will be removed in the future. Please use **Video Ma
 * **DA_ResolutionSelector** inspired but **not** based  on **Comfyui-Resolution-Master** from Comfyui-Resolution-Master](https://github.com/Azornes/Comfyui-Resolution-Master).
 
 * **DA_AnySwitch**  inspired but **not** based  on **AnySwitch** by **rgthree**.
+
+* **VideoMakerV2**  utilizes the workflow/embed hint from [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss).
    
 
 * Created with the assistance of **Google Gemini/Gemma**, **Qwen**, **DeepSeek**.
