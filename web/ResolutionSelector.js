@@ -252,23 +252,38 @@ app.registerExtension({
                 });
 
                 // Reorder widgets
-                node.widgets = [
-                    infoMainWidget,     // 1. Current info line
-                    widthWidget,        // 2. Width
-                    heightWidget,       // 3. Height
-                    stepWidget,         // 4. Step size
-                    alignWidget,        // 5. (Additionally keep align_to_step next to step)
-                    priorityWidget,     // 6.
-                    btnSwap,            // 7. Swap width/height
-					presetWidget,       // 8.
-                    infoMultWidget,     // 9. Multiplier info line
-                    multWidget,         // 10. Scale_mult
-                    btnApplyMult,       // 11. Apply multiplier button
-                    infoMpWidget,       // 12. MP info
-                    mpWidget,           // 13. Scale_mp
-                    btnApplyMp,         // 14. Megapixels button
-                    btnReadResolution   // 15. Read resolution button
-                ].filter(Boolean);
+				const reorderWidgets = () => {
+					node.widgets = [
+						infoMainWidget,     // 1. Current info line
+						widthWidget,        // 2. Width
+						heightWidget,       // 3. Height
+						stepWidget,         // 4. Step size
+						alignWidget,        // 5. (Additionally keep align_to_step next to step)
+						priorityWidget,     // 6.
+						btnSwap,            // 7. Swap width/height
+						presetWidget,       // 8.
+						infoMultWidget,     // 9. Multiplier info line
+						multWidget,         // 10. Scale_mult
+						btnApplyMult,       // 11. Apply multiplier button
+						infoMpWidget,       // 12. MP info
+						mpWidget,           // 13. Scale_mp
+						btnApplyMp,         // 14. Megapixels button
+						btnReadResolution   // 15. Read resolution button
+					].filter(Boolean);
+                };
+
+				// 1. Call once immediately when creating a node
+                reorderWidgets();
+
+                // 2. Intercept the onConfigure method.
+                const origOnConfigure = node.onConfigure;
+                node.onConfigure = function(info) {
+                    if (origOnConfigure) origOnConfigure.apply(this, arguments);
+                    reorderWidgets();
+                    refreshUIValues();
+                };
+                
+                // --------------------------------------------------------
 
                 refreshUIValues();
                 node.setSize([MIN_WIDTH, MIN_HEIGHT + 30]);
