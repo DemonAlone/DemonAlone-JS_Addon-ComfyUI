@@ -11,9 +11,11 @@ from .VideoMaker_v2 import VideoMakerV2
 from .load_video_nodes2 import LoadVideoNodes2
 from .ResolutionSelector import DA_ResolutionSelector
 from .DA_AnySwitch import DA_AnySwitch
+from .image_comparer import DA_ImageComparer
 
 NODE_CLASS_MAPPINGS = {
     "DA_AnySwitch": DA_AnySwitch,
+    "DA_ImageComparer": DA_ImageComparer,
     "DA_GroupController": DA_GroupController,
     "DA_NodeController": DA_NodeController,
     "DA_PlaySound": DA_PlaySound,
@@ -30,6 +32,7 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "DA_AnySwitch": "DA_AnySwitch",
+    "DA_ImageComparer": "Image Comparer",
     "DA_GroupController": "DA_GroupController [BETA]",
     "DA_NodeController": "DA_NodeController [BETA]",
     "DA_PlaySound": "DA_PlaySound",
