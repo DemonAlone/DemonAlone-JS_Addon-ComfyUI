@@ -1,4 +1,3 @@
-from .videomaker import VideoMakerNode
 from .load_video import LoadVideoNode
 from .play_sound import DA_PlaySound
 from .PresetFloat import PresetFloatNode
@@ -12,6 +11,7 @@ from .load_video_nodes2 import LoadVideoNodes2
 from .ResolutionSelector import DA_ResolutionSelector
 from .DA_AnySwitch import DA_AnySwitch
 from .image_comparer import DA_ImageComparer
+from .civitai_save import DA_SaveImage
 
 NODE_CLASS_MAPPINGS = {
     "DA_AnySwitch": DA_AnySwitch,
@@ -20,13 +20,13 @@ NODE_CLASS_MAPPINGS = {
     "DA_NodeController": DA_NodeController,
     "DA_PlaySound": DA_PlaySound,
     "DA_PromptFormatter": DA_PromptFormatter,
+    "DA_SaveImage": DA_SaveImage,   
     "LoadVideoNode": LoadVideoNode,
     "LoadVideoNodes2": LoadVideoNodes2,
     "PresetFloatNode": PresetFloatNode,
     "PresetIntNode": PresetIntNode,
     "DA_ResolutionSelector": DA_ResolutionSelector,
-    "VideoMakerNode": VideoMakerNode,
-    "VideoMakerV2": VideoMakerV2,      
+    "VideoMakerV2": VideoMakerV2, 
     "SimpleLoopController": SimpleLoopController,
 }
 
@@ -37,12 +37,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DA_NodeController": "DA_NodeController [BETA]",
     "DA_PlaySound": "DA_PlaySound",
     "DA_PromptFormatter": "Prompt Formatter",
+    "DA_SaveImage": "Save Image (Civitai Metadata)",
     "LoadVideoNode": "Load Video [BETA]",
     "LoadVideoNodes2": "Load Video (for Nodes 2.0) [BETA]",
     "PresetFloatNode": "Preset Float [BETA]",
     "PresetIntNode": "Preset Int [BETA]",
     "DA_ResolutionSelector": "Resolution Selector [BETA]",
-    "VideoMakerNode": "Video Maker [DEPRECATED]",
     "VideoMakerV2": "Video Maker V2 [BETA]",
     "SimpleLoopController": "Simple Loop Controller [BETA]",
 }
