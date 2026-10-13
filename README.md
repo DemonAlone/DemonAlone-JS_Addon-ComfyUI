@@ -8,19 +8,21 @@ This node is deprecated and will be removed in the future. Please use **Video Ma
 
 * **DA_Playsound** is based on **PlaySound 🐍** from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts).
 
-* **PresetFloatNode**  and **PresetIntNode** are based on **Power Primitive** from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy).
+* **PresetFloatNode** and **PresetIntNode** are based on **Power Primitive** from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy).
 
-* **DA_PromptFormatter** inspired but **not** based  on **Prompt Formatter (Only Text)** [comfyui_prompt_formatter](https://github.com/younyokel/comfyui_prompt_formatter).
+* **DA_PromptFormatter** inspired but **not** based on **Prompt Formatter (Only Text)** [comfyui_prompt_formatter](https://github.com/younyokel/comfyui_prompt_formatter).
 
-* **DA_NodeController** **DA_GroupController**  are based on **AUNMultiUniversal** from [AUN-ComfyUI-Nodes](https://github.com/loz2754/AUN-ComfyUI-Nodes). **DA_GroupController** has some features from feature_group_fast_toggle.js by **rgthree**.
+* **DA_NodeController** and **DA_GroupController** are based on **AUNMultiUniversal** from [AUN-ComfyUI-Nodes](https://github.com/loz2754/AUN-ComfyUI-Nodes). **DA_GroupController** has some features from feature_group_fast_toggle.js by **rgthree**.
 
-* Used the hint from  [ComfyUI-MyLoadVideo](https://github.com/1123156819/comfyui-myloadvideo) for getting a list of video previews for  **load_video_nodes2**.
+* Used the hint from [ComfyUI-MyLoadVideo](https://github.com/1123156819/comfyui-myloadvideo) for getting a list of video previews for  **load_video_nodes2**.
 
 * **DA_ResolutionSelector** inspired but **not** based  on **Comfyui-Resolution-Master** from Comfyui-Resolution-Master](https://github.com/Azornes/Comfyui-Resolution-Master).
 
-* **DA_AnySwitch**  inspired but **not** based  on **AnySwitch** by **rgthree**.
+* **DA_AnySwitch** inspired but **not** based on **AnySwitch** by **rgthree**.
 
-* **VideoMakerV2**  utilizes the workflow/embed hint from [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss).
-   
+* **VideoMakerV2** utilizes the workflow/embed hint from [ComfyUI-AusBoss](https://github.com/ausboss/ComfyUI-AusBoss).
+
+* **Save Image** is based on **Save Image (Civitai Metadata)** by **SeeSee** from  [ComfyUI-SeeSee-Civitai-Metadata](https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata).
+
 
 * Created with the assistance of **Google Gemini/Gemma**, **Qwen**, **DeepSeek**.
