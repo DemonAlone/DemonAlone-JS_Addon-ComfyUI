@@ -22,9 +22,7 @@ class DA_DynamicSliderNode:
     FUNCTION = "execute"
     CATEGORY = "CustomNodes/Utils"
     DESCRIPTION = (
-        "Dual-mode Slider with separate controls for INT and FLOAT. IMPORTANT! "
-        "When embedding into a subgraph, you MUST set ALL values (except value_int and value_float) BEFORE placing it in the subgraph. "
-        "Other values will be modified visually within the subgraph, but they won’t affect the effect itself. "
+        "Dual-mode Slider with separate controls for INT and FLOAT. IMPORTANT! The node is doesn't work inside subgraphs."
     )
 
     def execute(self, type, value_int, min_int, max_int, step_int, value_float, min_float, max_float, step_float):

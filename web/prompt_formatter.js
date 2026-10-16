@@ -74,19 +74,16 @@ function replaceBracketsWithWeight(text, open, close, factor) {
     // so that security scanners don't fall on dynamic RegExp
     const isRound = (open === "(");
     const regex = isRound 
-        ? /(\({2,})([^\(\)]*?)(\){2,})/g 
+        ? /(\({2,})([^\(\)]*?)(\){2,})/g
         : /(\[{2,})([^\[\]]*?)(\]{2,})/g;
     while (changed) {
         changed = false;
-        const newResult = result.replace(
-			regex,
-            (full, opens, content, closes) => {
-                const pairs = Math.min(opens.length, closes.length);
-                if (pairs < 2) return full;
-                const weight = Math.pow(factor, pairs);
-                return `${open}${content}:${weight.toFixed(2)}${close}`;
-            }
-        );
+        const newResult = result.replace(regex, (full, opens, content, closes) => {
+            const pairs = Math.min(opens.length, closes.length);
+            if (pairs < 2) return full;
+            const weight = Math.pow(factor, pairs);
+            return `${open}${content}:${weight.toFixed(2)}${close}`;
+        });
         if (newResult !== result) {
             changed = true;
             result = newResult;
@@ -95,9 +92,6 @@ function replaceBracketsWithWeight(text, open, close, factor) {
     return result;
 }
 
-// ------------------------------------------------------------
-// Extension registration (similar to LoopController)
-// ------------------------------------------------------------
 app.registerExtension({
     name: "DA_PromptFormatter",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
@@ -125,7 +119,65 @@ app.registerExtension({
 
                 // Save reference to the text widget in the node
                 this._textWidget = textWidget;
-
+                // --- BUTTON: Get Text ---
+                this.addWidget("button", "📥 Get Text", "get_text", () => {
+                    // Looking for the index of the text_in slot
+                    const inputIndex = this.inputs ? this.inputs.findIndex(i => i.name === "text_in") : -1;
+                    if (inputIndex === -1) {
+                        console.warn("[DA_PromptFormatter] 'text_in' input not found");
+                        return;
+                    }
+                    
+                    const linkId = this.inputs[inputIndex].link;
+                    if (!linkId) {
+                        console.warn("[DA_PromptFormatter] 'text_in' is not connected");
+                        return;
+                    }
+                    
+                    // Get the source node
+                    const link = app.graph.links[linkId];
+                    const originNode = app.graph.getNodeById(link.origin_id);
+                    if (!originNode) {
+                        console.warn("[DA_PromptFormatter] Origin node not found");
+                        return;
+                    }
+                    
+                    let extractedText = null;
+                    
+                    // Extracting text from source node widgets
+                    if (originNode.type === "PrimitiveNode") {
+                        extractedText = originNode.widgets[0].value;
+                    } else {
+                        // Priority widget names for most nodes
+                        const priorityNames = ["text", "prompt", "string", "value", "text_in"];
+                        for (const name of priorityNames) {
+                            const w = originNode.widgets.find(w => w.name === name);
+                            if (w && typeof w.value === "string") {
+                                extractedText = w.value;
+                                break;
+                            }
+                        }
+                        
+                        // Fallback: take the first string widget that comes along
+                        if (extractedText === null) {
+                            const firstStrWidget = originNode.widgets.find(w => typeof w.value === "string");
+                            if (firstStrWidget) extractedText = firstStrWidget.value;
+                        }
+                    }
+                    
+                    // Paste the found text into the main widget
+                    if (extractedText !== null && extractedText !== undefined) {
+                        this._textWidget.value = String(extractedText);
+                        if (this._textWidget.callback) {
+                            this._textWidget.callback(this._textWidget.value);
+                        }
+                        if (app.canvas) app.canvas.setDirty(true, true);
+                        if (this.setDirtyCanvas) this.setDirtyCanvas(true, true);
+                        console.log("[DA_PromptFormatter] Text extracted from", originNode.type);
+                    } else {
+                        console.warn("[DA_PromptFormatter] Could not extract text from origin node");
+                    }
+                });
                 // Button "Format prompt"
                 this.addWidget("button", "✔ Format prompt", "format", () => {
                     //  Save current value for undo operation
