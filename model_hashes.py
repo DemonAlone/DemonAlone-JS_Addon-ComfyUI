@@ -20,11 +20,9 @@ import os
 import re
 import threading
 import time
+import string
 
 log = logging.getLogger("DA_SaveImage")
-
-HEX64 = re.compile(r"\b([0-9a-fA-F]{64})\b")
-
 
 def _read_json(path):
     try:
@@ -32,7 +30,6 @@ def _read_json(path):
             return json.load(handle)
     except Exception:
         return None
-
 
 class HashStore:
     def __init__(self, cache_path):
@@ -91,7 +88,7 @@ class HashStore:
         meta = _read_json(stem + ".metadata.json")
         if isinstance(meta, dict):
             meta_size = meta.get("size")
-            if meta_size in (None, size) and isinstance(meta.get("sha256"), str) and HEX64.fullmatch(meta["sha256"]):
+            if meta_size in (None, size) and isinstance(meta.get("sha256"), str) and re.fullmatch(r"\b([0-9a-fA-F]{64})\b", meta["sha256"]):
                 sha = meta["sha256"].lower()
                 civitai = meta.get("civitai")
                 if isinstance(civitai, dict) and isinstance(civitai.get("id"), int):
@@ -102,7 +99,7 @@ class HashStore:
             for file_entry in info.get("files") or []:
                 hashes = (file_entry or {}).get("hashes") or {}
                 candidate = hashes.get("SHA256")
-                if isinstance(candidate, str) and HEX64.fullmatch(candidate):
+                if isinstance(candidate, str) and re.fullmatch(r"\b([0-9a-fA-F]{64})\b", candidate):
                     if sha is None or sha == candidate.lower():
                         sha = candidate.lower()
                         if isinstance(info.get("id"), int):
@@ -113,7 +110,7 @@ class HashStore:
             for candidate_path in (full_path + ".sha256", stem + ".sha256"):
                 try:
                     with open(candidate_path, "r", encoding="utf-8") as handle:
-                        match = HEX64.search(handle.read(512))
+                        match = re.search(r"\b([0-9a-fA-F]{64})\b", handle.read(512))
                     if match:
                         sha = match.group(1).lower()
                         break

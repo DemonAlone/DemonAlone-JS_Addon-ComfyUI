@@ -79,9 +79,6 @@ def _save_jpeg(img, path, parameters_text, quality):
                             "saving the JPEG without it", path)
     img.save(path, format="JPEG", quality=quality)
 
-# Filenames a user label may produce. Everything outside this set becomes "_".
-_LABEL_ALLOWED = re.compile(r"[^A-Za-z0-9 _\-\.\(\)\[\]{}#@!$&'+;=]")
-
 PNG_FORMATS = ("PNG_with_workflow", "PNG_only_parameters", "PNG_with_no_meta")
 JPG_FORMATS = ("JPG_only_parameters", "JPG_with_no_meta")
 ALL_FORMATS = PNG_FORMATS + JPG_FORMATS
@@ -279,7 +276,7 @@ class DA_SaveImage:
         # Leading dots would create hidden files or leave a ".." component behind.
         text = text.lstrip(".")
         # Whitelist a sensible filename alphabet; anything else becomes "_".
-        text = _LABEL_ALLOWED.sub("_", text)
+        text = re.sub(r"[^A-Za-z0-9 _\-\.\(\)\[\]{}#@!$&'+;=]", "_", text)
         text = " ".join(text.split())
         return text[:128]
 

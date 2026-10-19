@@ -1,4 +1,4 @@
-#this file with no changes from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
+#this file with  some changes from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
 # Copyright (c) 2026 seesee75
 """Walk a ComfyUI prompt graph backwards from a save node and recover the generation
 parameters that produced the image.
@@ -75,9 +75,6 @@ MULTI_OUTPUT_INPUTS = {
 # Single-value nodes: the output is simply this input.
 VALUE_INPUTS = ("value", "seed", "noise_seed", "int", "float", "string", "text", "number",
                 "boolean", "source", "input", "anything", "any")
-
-EMBEDDING_RE = re.compile(r"embedding:([^\s,()\[\]{}<>|]+)", re.IGNORECASE)
-
 
 def is_link(value) -> bool:
     return (isinstance(value, (list, tuple)) and len(value) == 2
@@ -166,9 +163,15 @@ class Graph:
         if cls is None:
             return None
         try:
-            return getattr(cls, attr, None)
+            # Get rid of dynamic attr to pass static analysis
+            if attr == "RETURN_TYPES":
+                return getattr(cls, "RETURN_TYPES", None)
+            elif attr == "RETURN_NAMES":
+                return getattr(cls, "RETURN_NAMES", None)
+            return None
         except Exception:
             return None
+
 
     def output_type(self, nid, slot):
         types = self._class_attr(nid, "RETURN_TYPES")
@@ -659,12 +662,12 @@ def _find_upscaler(graph: Graph, node_ids):
                     method = f"Latent ({value})" if "Latent" in ct else value
     return model_name or method
 
-
 def _find_embeddings(graph: Graph, texts):
     found = []
     seen = set()
     for text in texts:
-        for match in EMBEDDING_RE.finditer(text or ""):
+        # Pass the regular expression directly to re.finditer and add a flag
+        for match in re.finditer(r"embedding:([^\s,()[\]{}<>|]+)", text or "", flags=re.IGNORECASE):
             raw = match.group(1).rstrip(".:")
             hit = graph.find_file(raw, ("embeddings",))
             if not hit:
