@@ -83,42 +83,30 @@ PNG_FORMATS = ("PNG_with_workflow", "PNG_only_parameters", "PNG_with_no_meta")
 JPG_FORMATS = ("JPG_only_parameters", "JPG_with_no_meta")
 ALL_FORMATS = PNG_FORMATS + JPG_FORMATS
 
-def _find_output_cache():
-    """ComfyUI's executor keeps every node's outputs in ``caches.outputs`` while a prompt
-    runs, but hands a node nothing but its own inputs. The executor's ``execute()`` frame is
-    on the call stack while this node runs, so read the cache from there; fall back to the
-    executor object itself."""
-    frame = sys._getframe(1)
-    depth = 0
-    while frame is not None and depth < 100:
-        local_vars = frame.f_locals
-        outputs = getattr(local_vars.get("caches"), "outputs", None)
-        if outputs is not None and hasattr(outputs, "get_local"):
-            return outputs
-        outputs = getattr(local_vars.get("execution_list"), "output_cache", None)
-        if outputs is not None and hasattr(outputs, "get_local"):
-            return outputs
-        frame = frame.f_back
-        depth += 1
-    try:
-        import execution
-        for obj in gc.get_referrers(execution.PromptExecutor):
-            if isinstance(obj, execution.PromptExecutor):
-                outputs = getattr(getattr(obj, "caches", None), "outputs", None)
-                if outputs is not None and hasattr(outputs, "get_local"):
-                    return outputs
-    except Exception:
-        pass
-    return None
-
 class _ComfyAdapter:
-    """Connects the ComfyUI-free tracer to the running ComfyUI."""
+    """Connects the ComfyUI-free tracer to the running ComfyUI safely without using stack frames."""
 
     def __init__(self, dynprompt, prompt):
         self.dynprompt = dynprompt
         self.prompt = prompt or {}
-        self.cache = _find_output_cache()
         self._indexes = {}
+
+        # Trying to get the output cache directly from the dynprompt object (Nodes 2.0 / API v2)
+        self.cache = None
+        if hasattr(dynprompt, "execution_cache"):
+            self.cache = getattr(dynprompt.execution_cache, "outputs", None)
+        
+        # If not found in dynprompt, use the safe garbage collector gc.get_referrers instead of sys._getframe
+        if self.cache is None:
+            try:
+                import execution
+                for obj in gc.get_referrers(execution.PromptExecutor):
+                    if isinstance(obj, execution.PromptExecutor):
+                        self.cache = getattr(getattr(obj, "caches", None), "outputs", None)
+                        if self.cache is not None:
+                            break
+            except Exception:
+                pass
 
     def get_node(self, nid):
         if self.dynprompt is not None:
@@ -132,7 +120,11 @@ class _ComfyAdapter:
         if self.cache is None:
             return MISSING
         try:
-            entry = self.cache.get_local(nid)
+            # Support for both the new local cache and the old dictionary interface
+            if hasattr(self.cache, "get_local"):
+                entry = self.cache.get_local(nid)
+            else:
+                entry = self.cache.get(nid)
         except Exception:
             return MISSING
         if entry is None:
