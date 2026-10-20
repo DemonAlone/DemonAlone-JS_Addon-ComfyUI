@@ -413,11 +413,32 @@ const sanitizeLegacyValues = function () {
 
 const enforceRestriction = (node, slot, value) => {
     const restriction = getWidget(node, "toggle_restriction")?.value || "default";
-    if (!value && restriction !== "always one") return true;
     const slotCount = clampInt(getWidget(node, "slot_count")?.value || 3);
+
+    // If we try to turn off the toggle in 'always one' mode
+    if (!value && restriction === "always one") {
+        // Count how many toggles are currently included among the visible slots
+        const anyOn = Array.from({ length: slotCount }, (_, i) => getWidget(node, `switch_${i + 1}`)?.value)
+            .some(Boolean);
+        
+        // If there are no more active ones (it was the last one), return it to true and cancel the action
+        if (!anyOn) {
+            const widget = getWidget(node, `switch_${slot}`);
+            if (widget) {
+                widget.value = true;
+                saveWidgetValueToProperties(node, widget);
+            }
+            return false; 
+        }
+    }
+
+    // If we simply turn it off in other modes, we do nothing
+    if (!value && restriction !== "always one") return true;
+
+    // Logic to enable toggles in 'max one' and 'always one' modes
     if (restriction === "max one" || restriction === "always one") {
         if (value) {
-            node._DG_batchToggle = true;
+            node._DA_batchToggle = true;
             for (let other = 1; other <= slotCount; other++) {
                 if (other === slot) continue;
                 const otherWidget = getWidget(node, `switch_${other}`);
@@ -426,15 +447,7 @@ const enforceRestriction = (node, slot, value) => {
                     otherWidget.callback?.call(otherWidget, false);
                 }
             }
-            node._DG_batchToggle = false;
-        } else if (restriction === "always one") {
-            const anyOn = Array.from({ length: slotCount }, (_, i) => getWidget(node, `switch_${i + 1}`)?.value)
-                .some(Boolean);
-            if (!anyOn) {
-                const widget = getWidget(node, `switch_${slot}`);
-                if (widget) widget.value = true;
-                return false;
-            }
+            node._DA_batchToggle = false;
         }
     }
     return true;
