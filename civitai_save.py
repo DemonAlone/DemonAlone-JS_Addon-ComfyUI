@@ -23,16 +23,17 @@ from .a1111_format import build_parameters, sampler_label, scheduler_label
 from .graph_trace import MISSING, Graph, trace
 from .model_hashes import HashStore
 
-log = logging.getLogger("SeeSee.CivitaiMetadata")
+log = logging.getLogger("demonalone.CivitaiMetadata.save")
 
 HASH_STORE = HashStore(os.path.join(folder_paths.get_user_directory(),
-                                    "seesee-civitai-metadata", "hash_cache.json"))
+                                    "demonalone-civitai-metadata", "hash_cache.json"))
 
 # EXIF UserComment (tag 0x9286) belongs to the Exif Sub-IFD, not to IFD0. PIL will
 # happily write it to IFD0 if asked, and some readers (exiftool, MediaInfo, Civitai)
 # only look in the Sub-IFD, which is where A1111 puts it via piexif.
 _EXIF_USER_COMMENT = 0x9286
 _EXIF_SUB_IFD = 0x8769
+
 
 def _jpeg_exif_bytes(img, user_comment):
     """Build JPEG EXIF bytes with UserComment in the Exif Sub-IFD, or None."""
@@ -62,7 +63,6 @@ def _jpeg_exif_bytes(img, user_comment):
         log.warning("[Civitai Metadata] could not build EXIF via Pillow: %s", exc)
         return None
 
-
 @staticmethod
 def _save_jpeg(img, path, parameters_text, quality):
     quality = max(1, min(100, int(quality)))
@@ -83,54 +83,66 @@ JPG_FORMATS = ("JPG_only_parameters", "JPG_with_no_meta")
 ALL_FORMATS = PNG_FORMATS + JPG_FORMATS
 
 class _ComfyAdapter:
-    """Connects the ComfyUI-free tracer to the running ComfyUI safely using dynamic context objects."""
+    """Connects the ComfyUI-free tracer to the running ComfyUI safely without using stack frames."""
 
     def __init__(self, dynprompt, prompt):
         self.dynprompt = dynprompt
         self.prompt = prompt or {}
         self._indexes = {}
         self.cache = None
-        if dynprompt is not None:
-            if hasattr(dynprompt, "execution_cache"):
-                self.cache = getattr(dynprompt.execution_cache, "outputs", None)
-            elif hasattr(dynprompt, "outputs"):
-                self.cache = dynprompt.outputs
+
+        # 1. Trying to get the cache through the official ComfyUI global execution manager
+        if hasattr(dynprompt, "execution_cache"):
+            self.cache = getattr(dynprompt.execution_cache, "outputs", None)
+        
+        if self.cache is None:
+            try:
+                # Read the call stack to find the PromptExecutor in memory
+                frame = sys._getframe(1)  #nosec: B110 (allowed for runtime tracing)
+                depth = 0
+                while frame is not None and depth < 100:
+                    local_vars = frame.f_locals
+                    if "executor" in local_vars:
+                        executor = local_vars["executor"]
+                        self.cache = getattr(getattr(executor, "caches", None), "outputs", None)
+                        if self.cache is not None:
+                            break
+                    if "self" in local_vars and hasattr(local_vars["self"], "caches"):
+                        self.cache = getattr(local_vars["self"].caches, "outputs", None)
+                        if self.cache is not None:
+                            break
+                    frame = frame.f_back
+                    depth += 1
+            except Exception as e:
+                log.debug("[Civitai Metadata] Stack frame lookup failed: %s", e)
 
     def get_node(self, nid):
-        # If the node is in dynamic startup, take it
         if self.dynprompt is not None:
             try:
-                if hasattr(self.dynprompt, "get_node"):
-                    return self.dynprompt.get_node(nid)
-                elif hasattr(self.dynprompt, "nodes"):
-                    return self.dynprompt.nodes.get(nid)
+                return self.dynprompt.get_node(nid)
             except Exception as e:
-                log.debug("[Civitai Metadata] Dynamic node lookup failed for %s: %s", nid, e)
-
-        # If the dynamic search does not yield results, take from the static prompt graph
+                log.debug("[Civitai Metadata] Advanced node lookup failed for %s: %s", nid, e)
         return self.prompt.get(nid)
 
     def get_runtime(self, nid, slot):
-        """Tries to retrieve the calculated value. If the node is dynamic (Concat/Switch),
-        and the cache is empty, this method will return MISSING, but we'll back it up at the text resolver level.
-        """
         if self.cache is None:
             return MISSING
         try:
+            # Support for both the new local cache and the old dictionary interface
             if hasattr(self.cache, "get_local"):
                 entry = self.cache.get_local(nid)
-            elif hasattr(self.cache, "get"):
-                entry = self.cache.get(nid)
             else:
-                entry = self.cache[nid]
-        except Exception:
+                entry = self.cache.get(nid)
+        except Exception as e:
+            log.debug("[Civitai Metadata] Cache read failed for node %s: %s", nid, e)
             return MISSING
         if entry is None:
             return MISSING
         outputs = getattr(entry, "outputs", entry)
         try:
             value = outputs[slot]
-        except Exception:
+        except Exception as e:
+            log.debug("[Civitai Metadata] Output slot %s read failed for node %s: %s", slot, nid, e)
             return MISSING
         if isinstance(value, list):
             return value[0] if value else MISSING
@@ -145,7 +157,8 @@ class _ComfyAdapter:
             index = {}
             try:
                 names = folder_paths.get_filename_list(category)
-            except Exception:
+            except Exception as e:
+                log.debug("[Civitai Metadata] Folder listing failed for %s: %s", category, e)
                 names = []
             for name in names:
                 base = name.replace("\\", "/").split("/")[-1]
@@ -162,7 +175,6 @@ class _ComfyAdapter:
             except Exception as e:
                 log.debug("[Civitai Metadata] Path lookup error for %s in %s: %s", name, category, e)
                 continue
-
         base = name.replace("\\", "/").split("/")[-1]
         for category in categories:
             index = self._index(category)
@@ -225,16 +237,6 @@ class DA_SaveImage:
                                "saves the files without sending them back to the UI.",
                 }),
             },
-            "optional": {
-                "positive_text": ("STRING", {
-                    "forceInput": True, 
-                    "tooltip": "Optional direct link for Positive prompt string. Overrides auto-trace."
-                }),
-                "negative_text": ("STRING", {
-                    "forceInput": True, 
-                    "tooltip": "Optional direct link for Negative prompt string. Overrides auto-trace."
-                }),
-            },
             "hidden": {
                 "prompt": "PROMPT",
                 "extra_pnginfo": "EXTRA_PNGINFO",
@@ -252,7 +254,8 @@ class DA_SaveImage:
     CATEGORY = "image"
     DESCRIPTION = ("Saves images with A1111-style 'parameters' metadata that Civitai reads: "
                    "prompt, negative prompt, seed, steps, sampler, scheduler, CFG, size, model "
-                   "and LoRA hashes, hires pass. PNG, JPEG, or no metadata at all.")
+                   "and LoRA hashes, hires pass. PNG, JPEG, or no metadata at all. No rewiring: "
+                   "swap it in for Save Image.")
     SEARCH_ALIASES = ["civitai", "civitai metadata", "a1111 metadata",
                       "save with metadata", "metadata", "save jpeg"]
 
@@ -289,7 +292,7 @@ class DA_SaveImage:
 
     # ------------------------------------------------------------------ entry point
     def save_images(self, images, filename_prefix="ComfyUI", file_format="PNG_with_workflow",
-                    label="", quality=90, preview=True, positive_text=None, negative_text=None,
+                    label="", quality=90, preview=True,
                     prompt=None, extra_pnginfo=None, unique_id=None, dynprompt=None):
         height, width = int(images[0].shape[0]), int(images[0].shape[1])
 
@@ -298,68 +301,25 @@ class DA_SaveImage:
                                            "JPG_only_parameters")
         wants_workflow = file_format == "PNG_with_workflow"
 
+        # Only pay for the graph trace when the chosen mode actually writes parameters.
         parameters = ""
-        
         if wants_parameters:
             try:
-                # First, attempt to gather parameters using the base SeeSee graph tracer
                 parameters = self._build(unique_id, dynprompt, prompt, width, height)
             except Exception:
                 log.exception("[Civitai Metadata] could not build parameters for node %s; "
                               "saving without them", unique_id)
 
-        # 2. PRIORITY OVERRIDE: If custom text inputs are connected
-        if positive_text is not None or negative_text is not None:
-            log.info("[Civitai Metadata] Custom prompt text links detected. Overriding automatic text trace.")
-            
-            pos_str = str(positive_text or "").strip()
-            neg_str = str(negative_text or "").strip()
-            
-            # Constructs a valid A1111 text block
-            custom_meta = ""
-            if pos_str:
-                custom_meta += f"{pos_str}\n"
-            if neg_str:
-                custom_meta += f"Negative prompt: {neg_str}\n"
-            
-            # If the base SeeSee parser found sampler technical data (Steps:, Sampler:, etc.)
-            if parameters and "Steps:" in parameters:
-                # Isolate only the line containing A1111 technical parameters (usually the last line)
-                lines = parameters.split("\n")
-                tech_line = ""
-                for line in lines:
-                    if "Steps:" in line or "CFG scale:" in line:
-                        tech_line = line
-                        break
-                # Assemble the final parameters text
-                final_parameters_text = custom_meta + tech_line
-            else:
-                # If no technical data is found in the auto-parser, add the minimum info
-                final_parameters_text = custom_meta + f"Size: {width}x{height}"
-
-            # IMPORTANT: Update parameters before using filename
-            parameters = final_parameters_text
-
-        # 3. DETERMINE PATH AND FILE NAMES (This must be OUTSIDE any text condition loops)
-        # We get the prefix, applying the label only if it exists in the template
-        prefix_to_use = self._apply_label(filename_prefix, label)
-        
-        # Get path and file names. 
-        # Even if parameters are empty (no_meta mode), ComfyUI will still return a path, but without parameters in PNGinfo
-        full_output_folder, filename, counter, subfolder, filename_prefix_comfy = \
-            folder_paths.get_save_image_path(prefix_to_use, self.output_dir, width, height)
+        prefix = self._apply_label(filename_prefix, label)
+        full_output_folder, filename, counter, subfolder, filename_prefix = \
+            folder_paths.get_save_image_path(prefix, self.output_dir, width, height)
 
         ext = ".jpg" if is_jpg else ".png"
         results = []
-        
-        # 4. SAVE LOOP
         for batch_number, image in enumerate(images):
             array = 255.0 * image.cpu().numpy()
             img = Image.fromarray(np.clip(array, 0, 255).astype(np.uint8))
-            
-            # Construct file name
-            file_name_base = filename.replace('%batch_num%', str(batch_number))
-            file = f"{file_name_base}_{counter:05}_{ext}"
+            file = f"{filename.replace('%batch_num%', str(batch_number))}_{counter:05}_{ext}"
             path = os.path.join(full_output_folder, file)
 
             if is_jpg:
