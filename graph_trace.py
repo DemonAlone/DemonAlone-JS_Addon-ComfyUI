@@ -1,4 +1,4 @@
-#this file with  some changes from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
+#based on ComfyUI-SeeSee-Civitai-Metadata from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
 # Copyright (c) 2026 seesee75
 """Walk a ComfyUI prompt graph backwards from a save node and recover the generation
 parameters that produced the image.
@@ -20,6 +20,10 @@ from __future__ import annotations
 import re
 from collections import deque
 from dataclasses import dataclass, field
+
+import logging
+log = logging.getLogger("demonalone.CivitaiMetadata.trace")
+
 
 MISSING = object()
 
@@ -432,8 +436,8 @@ def _read_sampler(graph: Graph, nid) -> SamplerPass:
             sigmas = graph.resolve(ins["sigmas"])
             try:
                 p.steps = max(int(len(sigmas)) - 1, 0) or None
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("[Civitai Metadata] Failed to calculate steps from sigmas: %s", e)
 
     if is_link(ins.get("guider")):
         guider_id = str(ins["guider"][0])

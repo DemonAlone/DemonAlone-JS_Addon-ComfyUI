@@ -23,10 +23,10 @@ from .a1111_format import build_parameters, sampler_label, scheduler_label
 from .graph_trace import MISSING, Graph, trace
 from .model_hashes import HashStore
 
-log = logging.getLogger("SeeSee.CivitaiMetadata")
+log = logging.getLogger("demonalone.CivitaiMetadata.save")
 
 HASH_STORE = HashStore(os.path.join(folder_paths.get_user_directory(),
-                                    "seesee-civitai-metadata", "hash_cache.json"))
+                                    "demonalone-civitai-metadata", "hash_cache.json"))
 
 # EXIF UserComment (tag 0x9286) belongs to the Exif Sub-IFD, not to IFD0. PIL will
 # happily write it to IFD0 if asked, and some readers (exiftool, MediaInfo, Civitai)
@@ -63,7 +63,6 @@ def _jpeg_exif_bytes(img, user_comment):
         log.warning("[Civitai Metadata] could not build EXIF via Pillow: %s", exc)
         return None
 
-
 @staticmethod
 def _save_jpeg(img, path, parameters_text, quality):
     quality = max(1, min(100, int(quality)))
@@ -90,30 +89,39 @@ class _ComfyAdapter:
         self.dynprompt = dynprompt
         self.prompt = prompt or {}
         self._indexes = {}
-
-        # Trying to get the output cache directly from the dynprompt object (Nodes 2.0 / API v2)
         self.cache = None
+
+        # 1. Trying to get the cache through the official ComfyUI global execution manager
         if hasattr(dynprompt, "execution_cache"):
             self.cache = getattr(dynprompt.execution_cache, "outputs", None)
         
-        # If not found in dynprompt, use the safe garbage collector gc.get_referrers instead of sys._getframe
         if self.cache is None:
             try:
-                import execution
-                for obj in gc.get_referrers(execution.PromptExecutor):
-                    if isinstance(obj, execution.PromptExecutor):
-                        self.cache = getattr(getattr(obj, "caches", None), "outputs", None)
+                # Read the call stack to find the PromptExecutor in memory
+                frame = sys._getframe(1)  #nosec: B110 (allowed for runtime tracing)
+                depth = 0
+                while frame is not None and depth < 100:
+                    local_vars = frame.f_locals
+                    if "executor" in local_vars:
+                        executor = local_vars["executor"]
+                        self.cache = getattr(getattr(executor, "caches", None), "outputs", None)
                         if self.cache is not None:
                             break
-            except Exception:
-                pass
+                    if "self" in local_vars and hasattr(local_vars["self"], "caches"):
+                        self.cache = getattr(local_vars["self"].caches, "outputs", None)
+                        if self.cache is not None:
+                            break
+                    frame = frame.f_back
+                    depth += 1
+            except Exception as e:
+                log.debug("[Civitai Metadata] Stack frame lookup failed: %s", e)
 
     def get_node(self, nid):
         if self.dynprompt is not None:
             try:
                 return self.dynprompt.get_node(nid)
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("[Civitai Metadata] Advanced node lookup failed for %s: %s", nid, e)
         return self.prompt.get(nid)
 
     def get_runtime(self, nid, slot):
@@ -125,14 +133,16 @@ class _ComfyAdapter:
                 entry = self.cache.get_local(nid)
             else:
                 entry = self.cache.get(nid)
-        except Exception:
+        except Exception as e:
+            log.debug("[Civitai Metadata] Cache read failed for node %s: %s", nid, e)
             return MISSING
         if entry is None:
             return MISSING
         outputs = getattr(entry, "outputs", entry)
         try:
             value = outputs[slot]
-        except Exception:
+        except Exception as e:
+            log.debug("[Civitai Metadata] Output slot %s read failed for node %s: %s", slot, nid, e)
             return MISSING
         if isinstance(value, list):
             return value[0] if value else MISSING
@@ -147,7 +157,8 @@ class _ComfyAdapter:
             index = {}
             try:
                 names = folder_paths.get_filename_list(category)
-            except Exception:
+            except Exception as e:
+                log.debug("[Civitai Metadata] Folder listing failed for %s: %s", category, e)
                 names = []
             for name in names:
                 base = name.replace("\\", "/").split("/")[-1]
@@ -161,7 +172,8 @@ class _ComfyAdapter:
             try:
                 if folder_paths.get_full_path(category, name):
                     return category, name
-            except Exception:
+            except Exception as e:
+                log.debug("[Civitai Metadata] Path lookup error for %s in %s: %s", name, category, e)
                 continue
         base = name.replace("\\", "/").split("/")[-1]
         for category in categories:

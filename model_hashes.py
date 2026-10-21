@@ -1,4 +1,4 @@
-#this file with minor changes from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
+#based on ComfyUI-SeeSee-Civitai-Metadata from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
 # Copyright (c) 2026 seesee75
 """SHA256 of model files, cached, with Civitai version ids where a sidecar knows them.
 
@@ -15,14 +15,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 import os
 import re
 import threading
 import time
 import string
 
-log = logging.getLogger("DA_SaveImage")
+import logging
+log = logging.getLogger("demonalone.CivitaiMetadata.hashes")
 
 def _read_json(path):
     try:
@@ -114,9 +114,11 @@ class HashStore:
                     if match:
                         sha = match.group(1).lower()
                         break
-                except Exception:
+                except Exception as e:
+                    log.debug("[Civitai Metadata] Sidecar file read failed for %s: %s", candidate_path, e)
                     continue
         return sha, version_id
+
 
     @staticmethod
     def _compute(full_path, size):
