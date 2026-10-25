@@ -5,14 +5,14 @@ class DA_ResolutionSelector:
     RESOLUTION_PRESETS = [
         "Custom / None",
         "1:1 Square (1024×1024)",
-        "3:4 Portrait (768×1024)",
-        "4:5 Portrait (915×1144)",
+        "3:4 Portrait (864×1152)",
+        "4:5 Portrait (896×1120)",
         "5:12 Portrait (640×1536)",
         "7:9 Portrait (896×1152)",
         "9:16 Portrait (768×1344)",
         "13:19 Portrait (832×1216)",
-        "3:2 Landscape (1254×836)",
-        "4:3 Landscape (1024×768)",
+        "3:2 Landscape (1224×816)",
+        "4:3 Landscape (1120×1152)",
         "16:9 Landscape (1344×768)",
         "21:9 Landscape (1536×640)"
     ]
