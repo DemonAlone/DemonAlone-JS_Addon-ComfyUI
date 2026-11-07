@@ -17,14 +17,6 @@ app.registerExtension({
                 const MIN_WIDTH = 380;
                 const MIN_HEIGHT = 520;
 
-                const originalComputeSize = node.computeSize;
-                node.computeSize = function() {
-                    const size = originalComputeSize ? originalComputeSize.apply(this, arguments) : [200, 100];
-                    size[0] = Math.max(size[0], MIN_WIDTH);
-                    size[1] = Math.max(size[1] || 0, MIN_HEIGHT);
-                    return size;
-                };
-
                 // Find standard widgets from Python
                 const widthWidget = node.widgets.find(w => w.name === "width");
                 const heightWidget = node.widgets.find(w => w.name === "height");
@@ -35,38 +27,13 @@ app.registerExtension({
                 const mpWidget = node.widgets.find(w => w.name === "scale_mp");
                 const alignWidget = node.widgets.find(w => w.name === "align_to_step");
 
-                if (!widthWidget || !heightWidget || !stepWidget) return;
+                if (!widthWidget || !heightWidget) return;
 
-                const updateSteps = () => {
-                    const stepVal = alignWidget && !alignWidget.value ? 1 : (parseInt(stepWidget.value) || 1);
-                    [widthWidget, heightWidget].forEach(w => {
-                        if (w.options) {
-                            w.options.step = stepVal;
-                            w.options.step2 = stepVal;
-                        }
-                    });
-                };
-
-                if (stepWidget) {
-                    const origCallback = stepWidget.callback;
-                    stepWidget.callback = function(v) {
-                        if (origCallback) origCallback.apply(this, arguments);
-                        updateSteps();
-                    };
-                }
-
-                if (alignWidget) {
-                    const origAlignCallback = alignWidget.callback;
-                    alignWidget.callback = function(v) {
-                        if (origAlignCallback) origAlignCallback.apply(this, arguments);
-                        updateSteps();
-                    };
-                }
-
-                updateSteps();
-
-                // Auxiliary functions for checking toggle switches and steps
+				// Hide standard inputs, they will be controlled programmatically
+                widthWidget.hidden = true;
+                heightWidget.hidden = true;
                 const getStepValue = () => {
+					// If align_to_step is disabled (false), the step is always 1
                     if (alignWidget && alignWidget.value === false) return 1;
                     return parseInt(stepWidget.value) || 1;
                 };
@@ -80,13 +47,124 @@ app.registerExtension({
                     let rw = Math.round(w);
                     let rh = Math.round(h);
                     const step = getStepValue();
+					// Apply step alignment only if Strict Step is enabled
                     if (isStrictStepMode() && step > 1) {
                         rw = Math.round(rw / step) * step;
                         rh = Math.round(rh / step) * step;
                     }
                     return [Math.max(64, Math.min(32768, rw)), Math.max(64, Math.min(32768, rh))];
                 };
+                // --- UI CONTROLS ---
 
+                const createNumberControl = (label, initialValue, widgetRef) => {
+                    const container = document.createElement("div");
+                    container.style.display = "flex";
+                    container.style.alignItems = "center";
+                    container.style.justifyContent = "space-between";
+                    container.style.marginBottom = "4px";
+                    container.style.width = "100%";
+
+                    const lbl = document.createElement("span");
+                    lbl.textContent = label;
+                    lbl.style.width = "50px";
+                    lbl.style.fontWeight = "bold";
+                    lbl.style.color = "#ccc";
+
+                    const btnMinus = document.createElement("button");
+                    btnMinus.textContent = "-";
+                    btnMinus.style.width = "30px";
+                    btnMinus.style.height = "24px";
+                    btnMinus.style.cursor = "pointer";
+                    btnMinus.style.backgroundColor = "#333";
+                    btnMinus.style.color = "#fff";
+                    btnMinus.style.border = "1px solid #555";
+
+                    const valDisplay = document.createElement("input");
+                    valDisplay.type = "text";
+                    valDisplay.value = initialValue;
+                    valDisplay.style.width = "70px";
+                    valDisplay.style.textAlign = "center";
+                    valDisplay.style.backgroundColor = "#222";
+                    valDisplay.style.border = "1px solid #444";
+                    valDisplay.style.color = "#fff";
+                    valDisplay.style.borderRadius = "4px";
+                    valDisplay.style.padding = "2px";
+
+                    const btnPlus = document.createElement("button");
+                    btnPlus.textContent = "+";
+                    btnPlus.style.width = "30px";
+                    btnPlus.style.height = "24px";
+                    btnPlus.style.cursor = "pointer";
+                    btnPlus.style.backgroundColor = "#333";
+                    btnPlus.style.color = "#fff";
+                    btnPlus.style.border = "1px solid #555";
+
+                    container.appendChild(lbl);
+                    container.appendChild(btnMinus);
+                    container.appendChild(valDisplay);
+                    container.appendChild(btnPlus);
+
+                    // Update value function (synchronizes everything)
+                    const updateValue = (newVal) => {
+                        // 1. Get current values of both axes
+                        let curW = parseInt(widthWidget.value) || 1024;
+                        let curH = parseInt(heightWidget.value) || 1024;
+
+                        // 2. Update the required axis with the new value
+                        if (widgetRef === widthWidget) curW = newVal;
+                        else curH = newVal;
+
+                        // 3. Apply constraint logic (Snap to step)
+                        const [finalW, finalH] = applyConstraints(curW, curH);
+
+                        // 4. Write to hidden widgets (this is the node's output!)
+                        widthWidget.value = finalW;
+                        heightWidget.value = finalH;
+
+                        // 5. Update visual display
+                        valDisplay.value = (widgetRef === widthWidget) ? finalW : finalH;
+                        
+                        // 6. Update info blocks
+                        refreshUIValues();
+                        // 7. Mark node as changed
+                        node.setDirtyCanvas(true, true);
+                    };
+
+                    btnMinus.addEventListener('click', () => {
+                        const current = parseInt(valDisplay.value) || 0;
+                        const step = getStepValue();
+                        updateValue(current - step);
+                    });
+
+                    btnPlus.addEventListener('click', () => {
+                        const current = parseInt(valDisplay.value) || 0;
+                        const step = getStepValue();
+                        updateValue(current + step);
+                    });
+
+                    // Handle manual input
+                    valDisplay.addEventListener('change', (e) => {
+                        let v = parseInt(e.target.value);
+                        if (!isNaN(v)) {
+                            updateValue(v);
+                        } else {
+                            // If garbage is entered, revert to old value from widget
+                            valDisplay.value = widgetRef.value;
+                        }
+                    });
+
+                    return { container, updateDisplay: (v) => valDisplay.value = v };
+                };
+
+                // Create controls
+                const widthCtrl = createNumberControl("Width:", widthWidget.value, widthWidget);
+                const heightCtrl = createNumberControl("Height:", heightWidget.value, heightWidget);
+
+                // DOM Widgets for insertion into interface
+                const widthDomWidget = node.addDOMWidget("custom_width_ctrl", "html", widthCtrl.container);
+                const heightDomWidget = node.addDOMWidget("custom_height_ctrl", "html", heightCtrl.container);
+
+				// Create information widgets
                 const createInfoWidget = (name) => {
                     const div = document.createElement("div");
                     div.style.width = "100%";
@@ -98,6 +176,7 @@ app.registerExtension({
                     div.style.backgroundColor = "rgba(0, 0, 0, 0.25)";
                     div.style.borderRadius = "4px";
 					div.style.textAlign = "center"; // Center text alignment
+					div.style.marginTop = "4px";
                     
                     const widget = node.addDOMWidget(name, "info", div);
                     widget.element = div; // Explicitly anchor reference to element
@@ -125,8 +204,13 @@ app.registerExtension({
                 };
 
                 const refreshUIValues = () => {
+					// Take values ONLY from hidden widgets (guarantee of output accuracy)
                     const curW = Math.round(widthWidget.value || 0);
                     const curH = Math.round(heightWidget.value || 0);
+                    
+                    // Synchronize displays of custom controls
+                    widthCtrl.updateDisplay(curW);
+                    heightCtrl.updateDisplay(curH);
                     const mp = ((curW * curH) / 1000000).toFixed(2);
 
                     // 1. Update main info block
@@ -153,19 +237,34 @@ app.registerExtension({
                     }
                 };
 
-                const commitValue = (widget, val) => {
-                    widget.value = val;
-                    if (widget.inputEl) {
-                        widget.inputEl.value = val;
-                        widget.inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                    if (widget.callback) {
-                        widget.callback(val);
-                    }
-                    refreshUIValues();
+                // --- Event Handlers ---
+                const hookUpdate = (w, extraAction) => {
+                    if (!w) return;
+                    const orig = w.callback;
+                    w.callback = function() {
+                        if (orig) orig.apply(this, arguments);
+                        if (extraAction) extraAction();
+                        refreshUIValues();
+                    };
                 };
 
-                // Apply the preset taking into account the priority mode
+                // When step or align toggle changes, RECALCULATE current values
+                hookUpdate(stepWidget, () => {
+                    // Force apply new step to current values
+                    const [fw, fh] = applyConstraints(widthWidget.value, heightWidget.value);
+                    widthWidget.value = fw;
+                    heightWidget.value = fh;
+                });
+                
+                hookUpdate(alignWidget, () => {
+                    const [fw, fh] = applyConstraints(widthWidget.value, heightWidget.value);
+                    widthWidget.value = fw;
+                    heightWidget.value = fh;
+                });
+
+                hookUpdate(priorityWidget);
+                hookUpdate(multWidget);
+                hookUpdate(mpWidget);
                 if (presetWidget) {
                     const origPresetCb = presetWidget.callback;
                     presetWidget.callback = function(v) {
@@ -173,8 +272,8 @@ app.registerExtension({
                         if (presetResolutions[v]) {
                             const [resW, resH] = presetResolutions[v];
                             const [finalW, finalH] = applyConstraints(resW, resH);
-                            commitValue(widthWidget, finalW);
-                            commitValue(heightWidget, finalH);
+                            widthWidget.value = finalW;
+                            heightWidget.value = finalH;
 							// Reset the selector value back to 'Custom / None'
                             setTimeout(() => {
                                 commitValue(presetWidget, "Custom / None");
@@ -184,15 +283,11 @@ app.registerExtension({
                     };
                 }
 
-                [widthWidget, heightWidget, multWidget, mpWidget, priorityWidget, alignWidget, stepWidget].forEach(w => {
-                    if (w) {
-                        const oldCb = w.callback;
-                        w.callback = function(v) {
-                            if (oldCb) oldCb.apply(this, arguments);
-                            refreshUIValues();
-                        };
-                    }
-                });
+                const commitValue = (widget, val) => {
+                    widget.value = val;
+                    if (widget.callback) widget.callback(val);
+                    refreshUIValues();
+                };
 
                 // Create buttons
                 const btnReadResolution = node.addWidget("button", "Read Image Resolution", null, () => {
@@ -204,28 +299,36 @@ app.registerExtension({
                         const link = app.graph.links[linkId];
                         const originNode = app.graph.getNodeById(link.origin_id);
                         if (originNode) {
+							let fw, fh;
                             if (originNode.imgs && originNode.imgs.length > 0 && originNode.imgs[0].naturalWidth) {
-                                const [fw, fh] = applyConstraints(originNode.imgs[0].naturalWidth, originNode.imgs[0].naturalHeight);
-                                commitValue(widthWidget, fw);
-                                commitValue(heightWidget, fh);
+                                fw = originNode.imgs[0].naturalWidth;
+                                fh = originNode.imgs[0].naturalHeight;
                             } else {
+                                // Fallback to widgets
                                 const origW = originNode.widgets?.find(w => w.name === "width" || w.name === "image_width")?.value;
                                 const origH = originNode.widgets?.find(w => w.name === "height" || w.name === "image_height")?.value;
                                 if (origW && origH) {
-                                    const [fw, fh] = applyConstraints(origW, origH);
-                                    commitValue(widthWidget, fw);
-                                    commitValue(heightWidget, fh);
+                                    fw = origW;
+                                    fh = origH;
                                 }
                             }
-                            node.setDirtyCanvas(true, true);
+
+                            if (fw && fh) {
+                                const [constrainedW, constrainedH] = applyConstraints(fw, fh);
+                                widthWidget.value = constrainedW;
+                                heightWidget.value = constrainedH;
+								refreshUIValues();
+                            }
                         }
                     }
+                    node.setDirtyCanvas(true, true);
                 });
 
                 const btnSwap = node.addWidget("button", "Swap Width / Height", null, () => {
                     const [fw, fh] = applyConstraints(heightWidget.value, widthWidget.value);
-                    commitValue(widthWidget, fw);
-                    commitValue(heightWidget, fh);
+                    widthWidget.value = fw;
+                    heightWidget.value = fh;
+                    refreshUIValues();
                     node.setDirtyCanvas(true, true);
                 });
 
@@ -233,8 +336,9 @@ app.registerExtension({
                 const btnApplyMult = node.addWidget("button", "Apply Multiplier", null, () => {
                     const m = multWidget ? multWidget.value : 1.0;
                     const [fw, fh] = applyConstraints(widthWidget.value * m, heightWidget.value * m);
-                    commitValue(widthWidget, fw);
-                    commitValue(heightWidget, fh);
+                    widthWidget.value = fw;
+                    heightWidget.value = fh;
+                    refreshUIValues();
                     node.setDirtyCanvas(true, true);
                 });
 
@@ -246,47 +350,63 @@ app.registerExtension({
                     const currentMP = (curW * curH) / 1000000;
                     const scaleFactor = currentMP > 0 ? Math.sqrt(targetMP / currentMP) : 1;
                     const [fw, fh] = applyConstraints(curW * scaleFactor, curH * scaleFactor);
-                    commitValue(widthWidget, fw);
-                    commitValue(heightWidget, fh);
+                    widthWidget.value = fw;
+                    heightWidget.value = fh;
+                    refreshUIValues();
                     node.setDirtyCanvas(true, true);
                 });
 
                 // Reorder widgets
-				const reorderWidgets = () => {
-					node.widgets = [
-						infoMainWidget,     // 1. Current info line
-						widthWidget,        // 2. Width
-						heightWidget,       // 3. Height
-						stepWidget,         // 4. Step size
-						alignWidget,        // 5. (Additionally keep align_to_step next to step)
-						priorityWidget,     // 6.
-						btnSwap,            // 7. Swap width/height
-						presetWidget,       // 8.
-						infoMultWidget,     // 9. Multiplier info line
-						multWidget,         // 10. Scale_mult
-						btnApplyMult,       // 11. Apply multiplier button
-						infoMpWidget,       // 12. MP info
-						mpWidget,           // 13. Scale_mp
-						btnApplyMp,         // 14. Megapixels button
-						btnReadResolution   // 15. Read resolution button
+                const reorderWidgets = () => {
+                    node.widgets = [
+                        infoMainWidget,
+                        widthDomWidget,
+                        heightDomWidget,
+                        stepWidget,
+                        alignWidget,
+                        priorityWidget,
+                        btnSwap,
+                        presetWidget,
+                        infoMultWidget,
+                        multWidget,
+                        btnApplyMult,
+                        infoMpWidget,
+                        mpWidget,
+                        btnApplyMp,
+                        btnReadResolution,
+                        widthWidget, // Hidden, but important for output
+                        heightWidget // Hidden, but important for output
 					].filter(Boolean);
                 };
 
-				// 1. Call once immediately when creating a node
+                // --- Initialization ---
+                
+                // 1. Apply steps and boundaries immediately
+                
+                // 2. Reorder widgets
                 reorderWidgets();
+                
+                // 3. Update UI
+                refreshUIValues();
+                
+                // 4. Set size
+				node.setSize([320, 480]); 
 
-                // 2. Intercept the onConfigure method.
+                // --- RESTORING STATE ---
                 const origOnConfigure = node.onConfigure;
                 node.onConfigure = function(info) {
                     if (origOnConfigure) origOnConfigure.apply(this, arguments);
-                    reorderWidgets();
-                    refreshUIValues();
+                    
+                    setTimeout(() => {
+                        // On load, force apply constraints to remove "non-multiple" tails
+                        const [fw, fh] = applyConstraints(widthWidget.value, heightWidget.value);
+                        widthWidget.value = fw;
+                        heightWidget.value = fh;
+                        refreshUIValues();
+                        reorderWidgets();
+                        node.setDirtyCanvas(true, true);
+                    }, 50);
                 };
-                
-                // --------------------------------------------------------
-
-                refreshUIValues();
-                node.setSize([MIN_WIDTH, MIN_HEIGHT + 30]);
             };
         }
     }
