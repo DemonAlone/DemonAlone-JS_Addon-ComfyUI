@@ -12,7 +12,7 @@ class DA_ResolutionSelector:
         "9:16 Portrait (768×1344)",
         "13:19 Portrait (832×1216)",
         "3:2 Landscape (1224×816)",
-        "4:3 Landscape (1120×1152)",
+        "4:3 Landscape (1152×864)",
         "16:9 Landscape (1344×768)",
         "21:9 Landscape (1536×640)"
     ]
@@ -25,7 +25,6 @@ class DA_ResolutionSelector:
                 "height": ("INT", {"default": 1024, "min": 64, "max": 32768, "step": 1}),
                 "step_size": ([str(x) for x in s.STEPS_LIST], {"default": "16", "tooltip": "Divisor to snap dimensions to a multiple of this value (e.g., 16)."}),
                 "resolution_preset": (s.RESOLUTION_PRESETS, {"default": "Custom / None", "tooltip": "Quick base resolution preset."}),
-                "priority_mode": (["Strict Step (Snap to Grid)", "Strict Aspect (Preserve Ratio)"], {"default": "Strict Step (Snap to Grid)", "tooltip": "Choose whether step alignment or exact aspect ratio takes precedence."}),
                 "scale_mult": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 4.0, "step": 0.1, "tooltip": "Uniform multiplier applied directly to width and height."}),
                 "scale_mp": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 16.0, "step": 0.1, "tooltip": "Target megapixel count."}),
                 "align_to_step": ("BOOLEAN", {"default": False, "tooltip": "If True, snaps dimensions to step_size."}),
@@ -41,11 +40,17 @@ class DA_ResolutionSelector:
     CATEGORY = "utils/resolution"
     DESCRIPTION = "Utility node for resolution management with quick base presets, step snapping, and multipliers."
 
-    def apply_scaling(self, width, height, step_size, resolution_preset, priority_mode, scale_mult, scale_mp, align_to_step, image=None):
-        step = int(step_size) if align_to_step else 1
+    def apply_scaling(self, width, height, step_size, resolution_preset, scale_mult, scale_mp, align_to_step, image=None):
         w, h = width, height
-        if step > 1 and "Strict Step" in priority_mode:
-            w = round(w / step) * step
-            h = round(h / step) * step
+
+        if align_to_step:
+            try:
+                step = int(step_size)
+            except ValueError:
+                step = 1
                 
+            if step > 1:
+                w = round(w / step) * step
+                h = round(h / step) * step
+
         return (int(max(64, w)), int(max(64, h)))
