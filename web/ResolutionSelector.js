@@ -14,15 +14,12 @@ app.registerExtension({
                 }
 
                 const node = this;
-                const MIN_WIDTH = 380;
-                const MIN_HEIGHT = 520;
 
                 // Find standard widgets from Python
                 const widthWidget = node.widgets.find(w => w.name === "width");
                 const heightWidget = node.widgets.find(w => w.name === "height");
                 const stepWidget = node.widgets.find(w => w.name === "step_size");
 				const presetWidget = node.widgets.find(w => w.name === "resolution_preset");
-				const priorityWidget = node.widgets.find(w => w.name === "priority_mode");
                 const multWidget = node.widgets.find(w => w.name === "scale_mult");
                 const mpWidget = node.widgets.find(w => w.name === "scale_mp");
                 const alignWidget = node.widgets.find(w => w.name === "align_to_step");
@@ -38,17 +35,13 @@ app.registerExtension({
                     return parseInt(stepWidget.value) || 1;
                 };
 
-                const isStrictStepMode = () => {
-                    return priorityWidget && priorityWidget.value && priorityWidget.value.includes("Strict Step");
-                };
-
-                // Hard fitting method taking into account priority mode
+                // Hard fitting method taking into account step alignment
                 const applyConstraints = (w, h) => {
                     let rw = Math.round(w);
                     let rh = Math.round(h);
                     const step = getStepValue();
 					// Apply step alignment only if Strict Step is enabled
-                    if (isStrictStepMode() && step > 1) {
+                    if (step > 1) {
                         rw = Math.round(rw / step) * step;
                         rh = Math.round(rh / step) * step;
                     }
@@ -262,7 +255,6 @@ app.registerExtension({
                     heightWidget.value = fh;
                 });
 
-                hookUpdate(priorityWidget);
                 hookUpdate(multWidget);
                 hookUpdate(mpWidget);
                 if (presetWidget) {
@@ -364,7 +356,6 @@ app.registerExtension({
                         heightDomWidget,
                         stepWidget,
                         alignWidget,
-                        priorityWidget,
                         btnSwap,
                         presetWidget,
                         infoMultWidget,
@@ -390,7 +381,31 @@ app.registerExtension({
                 refreshUIValues();
                 
                 // 4. Set size
-				node.setSize([320, 480]); 
+				node.setSize([320, 560]);
+				// Minimum thresholds for your grid
+				const MIN_WIDTH = 320;
+				const FIXED_HEIGHT = 520;
+
+				// 1. Starting size when creating a node
+				node.setSize([Math.max(MIN_WIDTH, node.size[0]), FIXED_HEIGHT]);
+
+				// 2. Controlling user resizing
+				node.onResize = function(size) {
+					// If the user compresses the width less than the limit, hold it
+					if (size[0] < MIN_WIDTH) size[0] = MIN_WIDTH;
+					// Fix the height tightly, no matter what the user does
+					size[1] = FIXED_HEIGHT;
+				};
+
+				// 3. Automatic recalculation control by the engine (when the canvas is updated)
+				node.computeSize = function() {
+					// Take the current node width
+					const currentWidth = this.size ? this.size[0] : MIN_WIDTH;
+					// Return it, but always reset the altitude to 520
+					return [Math.max(MIN_WIDTH, currentWidth), FIXED_HEIGHT];
+				};
+
+
 
                 // --- RESTORING STATE ---
                 const origOnConfigure = node.onConfigure;
