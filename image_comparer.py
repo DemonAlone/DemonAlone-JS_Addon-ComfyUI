@@ -39,18 +39,23 @@ class DA_ImageComparer:
         res_a = preview_node.save_images(preview_a, filename_prefix="comp_a.")["ui"]["images"]
         res_b = preview_node.save_images(preview_b, filename_prefix="comp_b.")["ui"]["images"]
 
-        # 3. assembling pairs based on a larger batch (Via zip_longest)
+        # 3. Pairing with stretching the last frame of a short batch
         processed_images = []
-        # fillvalue=None ensures that we see if the picture has no match
+        last_a = res_a[-1]
+        last_b = res_b[-1]
+
         for img_a, img_b in itertools.zip_longest(res_a, res_b, fillvalue=None):
-            #If batch B runs out of frames, duplicate the last available frame from B
-            # (or use the current one from A so that the preview is not empty)
-            actual_a = img_a if img_a is not None else img_b
-            actual_b = img_b if img_b is not None else img_a
+            held_a = img_a is None
+            held_b = img_b is None
+
+            actual_a = img_a if not held_a else last_a
+            actual_b = img_b if not held_b else last_b
 
             processed_images.append({
                 "file_a": f"/view?filename={actual_a['filename']}&type={actual_a['type']}&subfolder={actual_a['subfolder']}",
-                "file_b": f"/view?filename={actual_b['filename']}&type={actual_b['type']}&subfolder={actual_b['subfolder']}"
+                "file_b": f"/view?filename={actual_b['filename']}&type={actual_b['type']}&subfolder={actual_b['subfolder']}",
+                "held_a": held_a,
+                "held_b": held_b
             })
 
         return {
