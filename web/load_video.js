@@ -192,7 +192,7 @@ app.registerExtension({
 				const widget = node.videoWidget;
 				if (widget) {
 					// // Drag-and-drop on container
-					let options = widget.options;
+					const options = widget.options;
 					if (options && Array.isArray(options)) {
 						if (!options.includes(filename)) {
 							options.push(filename);
@@ -200,11 +200,7 @@ app.registerExtension({
 							const idxNoFiles = options.indexOf("No video files found");
 							if (idxNoFiles !== -1) options.splice(idxNoFiles, 1);
 						}
-					} else if (
-						options &&
-						options.values &&
-						Array.isArray(options.values)
-					) {
+					} else if (options?.values && Array.isArray(options.values)) {
 						if (!options.values.includes(filename)) {
 							options.values.push(filename);
 							const idxNoFiles = options.values.indexOf("No video files found");
@@ -279,7 +275,7 @@ app.registerExtension({
 				}
 			};
 			const originalCallback = videoWidget.callback;
-			videoWidget.callback = function (value) {
+			videoWidget.callback = (value) => {
 				if (originalCallback) originalCallback(value);
 				updateVideo();
 			};

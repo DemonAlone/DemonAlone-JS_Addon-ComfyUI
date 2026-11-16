@@ -90,7 +90,7 @@ app.registerExtension({
 			if (fpsInfo) {
 				fpsInfo.style.display = "block";
 				frameCountInfo.style.display = "block";
-				if (!fpsInfo.textContent || !fpsInfo.textContent.includes("fps")) {
+				if (!fpsInfo.textContent?.includes("fps")) {
 					fpsInfo.textContent = "Loading...";
 					frameCountInfo.textContent = "Loading...";
 				}
@@ -144,14 +144,14 @@ app.registerExtension({
 			createOverlay(playerContainer);
 
 			const videoWidget = node.widgets?.find((w) => w.name === "video");
-			if (videoWidget && videoWidget.value) {
+			if (videoWidget?.value) {
 				updateMetadata(videoWidget.value);
 			}
 		};
 
 		// 4. Global observer for structural changes
 		const globalObserver = new MutationObserver((mutations) => {
-			for (let mutation of mutations) {
+			for (const mutation of mutations) {
 				if (
 					mutation.addedNodes.length > 0 ||
 					mutation.removedNodes.length > 0
@@ -173,8 +173,8 @@ app.registerExtension({
 		const videoWidget = node.widgets?.find((w) => w.name === "video");
 		if (videoWidget) {
 			const originalCallback = videoWidget.callback;
-			videoWidget.callback = function (value) {
-				if (originalCallback) originalCallback.apply(this, arguments);
+			videoWidget.callback = function (_value, ...args) {
+				if (originalCallback) originalCallback.apply(this, args);
 				if (fpsInfo) {
 					fpsInfo.textContent = "Loading...";
 					frameCountInfo.textContent = "Loading...";
@@ -185,9 +185,9 @@ app.registerExtension({
 
 		// Disconnect observer when node is removed from the canvas
 		const originalOnRemoved = node.onRemoved;
-		node.onRemoved = function () {
+		node.onRemoved = function (...args) {
 			if (globalObserver) globalObserver.disconnect();
-			if (originalOnRemoved) originalOnRemoved.apply(this, arguments);
+			if (originalOnRemoved) originalOnRemoved.apply(this, args);
 		};
 	},
 });
