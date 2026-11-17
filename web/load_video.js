@@ -3,273 +3,283 @@ import { app } from "../../scripts/app.js";
 console.log("[Load video] Extension loaded");
 
 app.registerExtension({
-    name: "LoadVideo",
-    async nodeCreated(node) {
-        if (node.comfyClass !== "LoadVideoNode") return;
+	name: "LoadVideo",
+	async nodeCreated(node) {
+		if (node.comfyClass !== "LoadVideoNode") return;
 
 		const container = document.createElement("div");
-        container.style.width = "100%";
-        container.style.height = "100%";
-        container.style.flex = "1 1 0px";    // Forcefully allow the flex to collapse
-        container.style.minWidth = "0px";
-        container.style.minHeight = "0px";
-        container.style.backgroundColor = "#111";
-        container.style.display = "flex";
-        container.style.flexDirection = "column";
-        container.style.alignItems = "center";
-        container.style.justifyContent = "center";
-        container.style.position = "relative";
-        container.style.borderRadius = "4px";
-        container.style.overflow = "hidden";
+		container.style.width = "100%";
+		container.style.height = "100%";
+		container.style.flex = "1 1 0px"; // Forcefully allow the flex to collapse
+		container.style.minWidth = "0px";
+		container.style.minHeight = "0px";
+		container.style.backgroundColor = "#111";
+		container.style.display = "flex";
+		container.style.flexDirection = "column";
+		container.style.alignItems = "center";
+		container.style.justifyContent = "center";
+		container.style.position = "relative";
+		container.style.borderRadius = "4px";
+		container.style.overflow = "hidden";
 
-        const videoEl = document.createElement("video");
-        videoEl.controls = true;
-        videoEl.style.width = "100%";
-        videoEl.style.height = "100%";
-        videoEl.style.flex = "1 1 0px";    // Mandatory for a child element inside a flex in Nodes 2.0
-        videoEl.style.minWidth = "0px";
-        videoEl.style.minHeight = "0px";
-        videoEl.style.objectFit = "contain";
-        videoEl.style.display = "block";
-        container.appendChild(videoEl);
+		const videoEl = document.createElement("video");
+		videoEl.controls = true;
+		videoEl.style.width = "100%";
+		videoEl.style.height = "100%";
+		videoEl.style.flex = "1 1 0px"; // Mandatory for a child element inside a flex in Nodes 2.0
+		videoEl.style.minWidth = "0px";
+		videoEl.style.minHeight = "0px";
+		videoEl.style.objectFit = "contain";
+		videoEl.style.display = "block";
+		container.appendChild(videoEl);
 
-        const statusDiv = document.createElement("div");
-        statusDiv.style.position = "absolute";
-        statusDiv.style.color = "#888";
-        statusDiv.style.fontFamily = "sans-serif";
-        statusDiv.style.fontSize = "14px";
-        statusDiv.textContent = "No video selected";
-        container.appendChild(statusDiv);
+		const statusDiv = document.createElement("div");
+		statusDiv.style.position = "absolute";
+		statusDiv.style.color = "#888";
+		statusDiv.style.fontFamily = "sans-serif";
+		statusDiv.style.fontSize = "14px";
+		statusDiv.textContent = "No video selected";
+		container.appendChild(statusDiv);
 
 		// ---------- Drag-and-drop and Upload Button ----------
-        const fileInput = document.createElement("input");
-        fileInput.type = "file";
-        fileInput.accept = ".mp4,.avi,.mov,.mkv,.webm";
-        fileInput.style.display = "none";
-        container.appendChild(fileInput);
+		const fileInput = document.createElement("input");
+		fileInput.type = "file";
+		fileInput.accept = ".mp4,.avi,.mov,.mkv,.webm";
+		fileInput.style.display = "none";
+		container.appendChild(fileInput);
 
-        // Container for button and status (top right corner)
-        const controlsDiv = document.createElement("div");
-        controlsDiv.style.position = "absolute";
-        controlsDiv.style.top = "10px";
-        controlsDiv.style.right = "10px";
-        controlsDiv.style.display = "flex";
-        controlsDiv.style.flexDirection = "column";
-        controlsDiv.style.alignItems = "flex-end";
-        controlsDiv.style.gap = "4px";
-        controlsDiv.style.zIndex = "10";
-        controlsDiv.style.pointerEvents = "none"; // don’t interfere with clicks on videos
-        container.appendChild(controlsDiv);
+		// Container for button and status (top right corner)
+		const controlsDiv = document.createElement("div");
+		controlsDiv.style.position = "absolute";
+		controlsDiv.style.top = "10px";
+		controlsDiv.style.right = "10px";
+		controlsDiv.style.display = "flex";
+		controlsDiv.style.flexDirection = "column";
+		controlsDiv.style.alignItems = "flex-end";
+		controlsDiv.style.gap = "4px";
+		controlsDiv.style.zIndex = "10";
+		controlsDiv.style.pointerEvents = "none"; // don’t interfere with clicks on videos
+		container.appendChild(controlsDiv);
 
-        const uploadBtn = document.createElement("button");
-        uploadBtn.textContent = "📁 Upload";
-        uploadBtn.style.padding = "4px 8px";
-        uploadBtn.style.backgroundColor = "rgba(0,0,0,0.6)";
-        uploadBtn.style.color = "#fff";
-        uploadBtn.style.border = "1px solid #666";
-        uploadBtn.style.borderRadius = "4px";
-        uploadBtn.style.cursor = "pointer";
-        uploadBtn.style.fontSize = "12px";
-        uploadBtn.style.pointerEvents = "auto";
-        uploadBtn.style.transition = "background 0.2s";
-        uploadBtn.onmouseover = () => uploadBtn.style.backgroundColor = "rgba(60,60,60,0.8)";
-        uploadBtn.onmouseout = () => uploadBtn.style.backgroundColor = "rgba(0,0,0,0.6)";
-        uploadBtn.onclick = () => fileInput.click();
-        controlsDiv.appendChild(uploadBtn);
+		const uploadBtn = document.createElement("button");
+		uploadBtn.textContent = "📁 Upload";
+		uploadBtn.style.padding = "4px 8px";
+		uploadBtn.style.backgroundColor = "rgba(0,0,0,0.6)";
+		uploadBtn.style.color = "#fff";
+		uploadBtn.style.border = "1px solid #666";
+		uploadBtn.style.borderRadius = "4px";
+		uploadBtn.style.cursor = "pointer";
+		uploadBtn.style.fontSize = "12px";
+		uploadBtn.style.pointerEvents = "auto";
+		uploadBtn.style.transition = "background 0.2s";
+		uploadBtn.onmouseover = () =>
+			(uploadBtn.style.backgroundColor = "rgba(60,60,60,0.8)");
+		uploadBtn.onmouseout = () =>
+			(uploadBtn.style.backgroundColor = "rgba(0,0,0,0.6)");
+		uploadBtn.onclick = () => fileInput.click();
+		controlsDiv.appendChild(uploadBtn);
 
-        const uploadStatus = document.createElement("div");
-        uploadStatus.style.color = "#fff";
-        uploadStatus.style.fontSize = "12px";
-        uploadStatus.style.backgroundColor = "rgba(0,0,0,0.5)";
-        uploadStatus.style.padding = "2px 6px";
-        uploadStatus.style.borderRadius = "3px";
-        uploadStatus.style.display = "none";
-        controlsDiv.appendChild(uploadStatus);
+		const uploadStatus = document.createElement("div");
+		uploadStatus.style.color = "#fff";
+		uploadStatus.style.fontSize = "12px";
+		uploadStatus.style.backgroundColor = "rgba(0,0,0,0.5)";
+		uploadStatus.style.padding = "2px 6px";
+		uploadStatus.style.borderRadius = "3px";
+		uploadStatus.style.display = "none";
+		controlsDiv.appendChild(uploadStatus);
 
-		
 		// Create a block to display the resolution
-        const resolutionInfo = document.createElement("div");
-        resolutionInfo.style.color = "#fff";
-        resolutionInfo.style.fontSize = "12px";
-        resolutionInfo.style.backgroundColor = "rgba(0,0,0,0.5)";
-        resolutionInfo.style.padding = "2px 6px";
-        resolutionInfo.style.borderRadius = "3px";
-		resolutionInfo.style.display = "none"; // Initially hidden  
-		resolutionInfo.style.pointerEvents = "none"; // To avoid blocking clicks  
-		resolutionInfo.style.marginTop = "4px"; // Small margin from the button  
+		const resolutionInfo = document.createElement("div");
+		resolutionInfo.style.color = "#fff";
+		resolutionInfo.style.fontSize = "12px";
+		resolutionInfo.style.backgroundColor = "rgba(0,0,0,0.5)";
+		resolutionInfo.style.padding = "2px 6px";
+		resolutionInfo.style.borderRadius = "3px";
+		resolutionInfo.style.display = "none"; // Initially hidden
+		resolutionInfo.style.pointerEvents = "none"; // To avoid blocking clicks
+		resolutionInfo.style.marginTop = "4px"; // Small margin from the button
 		controlsDiv.appendChild(resolutionInfo); // Append to controls container
-		
+
 		// Create a block to display the FPS
-        const fpsInfo = document.createElement("div");
-        fpsInfo.style.color = "#fff";
-        fpsInfo.style.fontSize = "12px";
-        fpsInfo.style.backgroundColor = "rgba(0,0,0,0.5)";
-        fpsInfo.style.padding = "2px 6px";
-        fpsInfo.style.borderRadius = "3px";
-        fpsInfo.style.display = "none";
-        fpsInfo.style.pointerEvents = "none";
-        fpsInfo.style.marginTop = "4px";
-        controlsDiv.appendChild(fpsInfo);
-		
+		const fpsInfo = document.createElement("div");
+		fpsInfo.style.color = "#fff";
+		fpsInfo.style.fontSize = "12px";
+		fpsInfo.style.backgroundColor = "rgba(0,0,0,0.5)";
+		fpsInfo.style.padding = "2px 6px";
+		fpsInfo.style.borderRadius = "3px";
+		fpsInfo.style.display = "none";
+		fpsInfo.style.pointerEvents = "none";
+		fpsInfo.style.marginTop = "4px";
+		controlsDiv.appendChild(fpsInfo);
+
 		// Create a block to display the Frame Count
-        const frameCountInfo = document.createElement("div");
-        frameCountInfo.style.color = "#fff";
-        frameCountInfo.style.fontSize = "12px";
-        frameCountInfo.style.backgroundColor = "rgba(0,0,0,0.5)";
-        frameCountInfo.style.padding = "2px 6px";
-        frameCountInfo.style.borderRadius = "3px";
-        frameCountInfo.style.display = "none";
-        frameCountInfo.style.pointerEvents = "none";
-        frameCountInfo.style.marginTop = "4px";
-        controlsDiv.appendChild(frameCountInfo);
+		const frameCountInfo = document.createElement("div");
+		frameCountInfo.style.color = "#fff";
+		frameCountInfo.style.fontSize = "12px";
+		frameCountInfo.style.backgroundColor = "rgba(0,0,0,0.5)";
+		frameCountInfo.style.padding = "2px 6px";
+		frameCountInfo.style.borderRadius = "3px";
+		frameCountInfo.style.display = "none";
+		frameCountInfo.style.pointerEvents = "none";
+		frameCountInfo.style.marginTop = "4px";
+		controlsDiv.appendChild(frameCountInfo);
 
-
-        // Metadata loading handler (attach once)
-        videoEl.addEventListener('loadedmetadata', function() {
-            // Resolution
+		// Metadata loading handler (attach once)
+		videoEl.addEventListener("loadedmetadata", function () {
+			// Resolution
 			const w = this.videoWidth;
-            const h = this.videoHeight;
-            if (w && h) {
-                resolutionInfo.textContent = `${w}×${h}`;
-            } else {
-                resolutionInfo.textContent = 'Unknown resolution';
-            }
-            resolutionInfo.style.display = "block";
-        });		
-		
+			const h = this.videoHeight;
+			if (w && h) {
+				resolutionInfo.textContent = `${w}×${h}`;
+			} else {
+				resolutionInfo.textContent = "Unknown resolution";
+			}
+			resolutionInfo.style.display = "block";
+		});
+
 		// Handling file selection via button
-        fileInput.addEventListener("change", async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            await uploadFile(file, uploadStatus, node);
-            fileInput.value = "";
-        });
+		fileInput.addEventListener("change", async (e) => {
+			const file = e.target.files[0];
+			if (!file) return;
+			await uploadFile(file, uploadStatus, node);
+			fileInput.value = "";
+		});
 
-        // Drag-and-drop on container
-        container.addEventListener("dragover", (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = "copy";
-            container.style.border = "2px dashed #4a8";
-        });
+		// Drag-and-drop on container
+		container.addEventListener("dragover", (e) => {
+			e.preventDefault();
+			e.dataTransfer.dropEffect = "copy";
+			container.style.border = "2px dashed #4a8";
+		});
 
-        container.addEventListener("dragleave", (e) => {
-            e.preventDefault();
-            container.style.border = "none";
-        });
+		container.addEventListener("dragleave", (e) => {
+			e.preventDefault();
+			container.style.border = "none";
+		});
 
-        container.addEventListener("drop", async (e) => {
-            e.preventDefault();
-            container.style.border = "none";
-            const files = e.dataTransfer.files;
-            if (files.length === 0) return;
-            const file = files[0];
-            await uploadFile(file, uploadStatus, node);
-        });
+		container.addEventListener("drop", async (e) => {
+			e.preventDefault();
+			container.style.border = "none";
+			const files = e.dataTransfer.files;
+			if (files.length === 0) return;
+			const file = files[0];
+			await uploadFile(file, uploadStatus, node);
+		});
 
-        async function uploadFile(file, statusEl, node) {
-            const ext = file.name.split('.').pop().toLowerCase();
-            if (!['mp4', 'avi', 'mov', 'mkv', 'webm'].includes(ext)) {
-                statusEl.style.display = "block";
-                statusEl.textContent = "❌ Unsupported";
-                setTimeout(() => statusEl.style.display = "none", 3000);
-                return;
-            }
+		async function uploadFile(file, statusEl, node) {
+			const ext = file.name.split(".").pop().toLowerCase();
+			if (!["mp4", "avi", "mov", "mkv", "webm"].includes(ext)) {
+				statusEl.style.display = "block";
+				statusEl.textContent = "❌ Unsupported";
+				setTimeout(() => (statusEl.style.display = "none"), 3000);
+				return;
+			}
 
-            statusEl.style.display = "block";
-            statusEl.textContent = "⏳ Uploading...";
-            const formData = new FormData();
-            formData.append("file", file);
+			statusEl.style.display = "block";
+			statusEl.textContent = "⏳ Uploading...";
+			const formData = new FormData();
+			formData.append("file", file);
 
-            try {
-                const resp = await fetch("/uploadvideo", { method: "POST", body: formData });
-                if (!resp.ok) throw new Error("Upload failed");
-                const json = await resp.json();
-                const filename = json.name;
+			try {
+				const resp = await fetch("/uploadvideo", {
+					method: "POST",
+					body: formData,
+				});
+				if (!resp.ok) throw new Error("Upload failed");
+				const json = await resp.json();
+				const filename = json.name;
 
-                const widget = node.videoWidget;
-                if (widget) {
-                    // // Drag-and-drop on container
-                    let options = widget.options;
-                    if (options && Array.isArray(options)) {
-                        if (!options.includes(filename)) {
-                            options.push(filename);
+				const widget = node.videoWidget;
+				if (widget) {
+					// // Drag-and-drop on container
+					const options = widget.options;
+					if (options && Array.isArray(options)) {
+						if (!options.includes(filename)) {
+							options.push(filename);
 							// Remove stubs from the list when the first file is successfully loaded
-                            const idxNoFiles = options.indexOf("No video files found");
-                            if (idxNoFiles !== -1) options.splice(idxNoFiles, 1);
-                        }
-                    } else if (options && options.values && Array.isArray(options.values)) {
-                        if (!options.values.includes(filename)) {
-                            options.values.push(filename);
-                            const idxNoFiles = options.values.indexOf("No video files found");
-                            if (idxNoFiles !== -1) options.values.splice(idxNoFiles, 1);
+							const idxNoFiles = options.indexOf("No video files found");
+							if (idxNoFiles !== -1) options.splice(idxNoFiles, 1);
 						}
-                    }
-
-                    widget.value = filename;
-                    if (widget.callback) widget.callback(filename);
-                }
-
-                statusEl.textContent = "✅ Done";
-                setTimeout(() => statusEl.style.display = "none", 3000);
-            } catch (err) {
-                console.error("Upload error:", err);
-                statusEl.textContent = "❌ Error";
-                setTimeout(() => statusEl.style.display = "none", 3000);
-            }
-        }
-        // ---------- End of upload block ----------
-
-        node.addDOMWidget("video_preview", "video_widget", container);
-        node.size = [360, 280];
-
-        const videoWidget = node.widgets?.find(w => w.name === "video");
-        if (videoWidget) {
-            node.videoWidget = videoWidget;
-            const updateVideo = async () => {
-                const filename = videoWidget.value;
-				// Handle selection 'None'
-                if (filename && filename !== "None" && filename !== "No video files found") {
-                    const url = `/inputvideo?file=${encodeURIComponent(filename)}`;
-                    videoEl.src = url;
-                    videoEl.load();
-                    statusDiv.style.display = "none";
-                    videoEl.style.display = "block";
-					resolutionInfo.style.display = "block"; // Show infoDiv, but text will update after metadata is loaded
-                    resolutionInfo.textContent = "Loading...";
-					fpsInfo.textContent = "Loading...";
-                    frameCountInfo.textContent = "Loading...";
-                    fpsInfo.style.display = "block";
-                    frameCountInfo.style.display = "block";
-					
-					// Requesting exact data from the backend in real time
-                    try {
-                        const metaResp = await fetch(`/get_video_metadata?file=${encodeURIComponent(filename)}`);
-                        if (metaResp.ok) {
-                            const meta = await metaResp.json();
-                            fpsInfo.textContent = `${meta.fps.toFixed(2)} fps`;
-                            frameCountInfo.textContent = `${meta.frame_count} frames`;
-                        } else {
-                            fpsInfo.textContent = "Error fps";
-                            frameCountInfo.textContent = "Error frames";
-                        }
-                    } catch (err) {
-                        console.error("Failed to fetch video metadata:", err);
+					} else if (options?.values && Array.isArray(options.values)) {
+						if (!options.values.includes(filename)) {
+							options.values.push(filename);
+							const idxNoFiles = options.values.indexOf("No video files found");
+							if (idxNoFiles !== -1) options.values.splice(idxNoFiles, 1);
+						}
 					}
-                } else {
-                    videoEl.style.display = "none";
-                    statusDiv.style.display = "block";
-                    statusDiv.textContent = filename === "None" ? "No video (None)" : "No video selected";
+
+					widget.value = filename;
+					if (widget.callback) widget.callback(filename);
+				}
+
+				statusEl.textContent = "✅ Done";
+				setTimeout(() => (statusEl.style.display = "none"), 3000);
+			} catch (err) {
+				console.error("Upload error:", err);
+				statusEl.textContent = "❌ Error";
+				setTimeout(() => (statusEl.style.display = "none"), 3000);
+			}
+		}
+		// ---------- End of upload block ----------
+
+		node.addDOMWidget("video_preview", "video_widget", container);
+		node.size = [360, 280];
+
+		const videoWidget = node.widgets?.find((w) => w.name === "video");
+		if (videoWidget) {
+			node.videoWidget = videoWidget;
+			const updateVideo = async () => {
+				const filename = videoWidget.value;
+				// Handle selection 'None'
+				if (
+					filename &&
+					filename !== "None" &&
+					filename !== "No video files found"
+				) {
+					const url = `/inputvideo?file=${encodeURIComponent(filename)}`;
+					videoEl.src = url;
+					videoEl.load();
+					statusDiv.style.display = "none";
+					videoEl.style.display = "block";
+					resolutionInfo.style.display = "block"; // Show infoDiv, but text will update after metadata is loaded
+					resolutionInfo.textContent = "Loading...";
+					fpsInfo.textContent = "Loading...";
+					frameCountInfo.textContent = "Loading...";
+					fpsInfo.style.display = "block";
+					frameCountInfo.style.display = "block";
+
+					// Requesting exact data from the backend in real time
+					try {
+						const metaResp = await fetch(
+							`/get_video_metadata?file=${encodeURIComponent(filename)}`,
+						);
+						if (metaResp.ok) {
+							const meta = await metaResp.json();
+							fpsInfo.textContent = `${meta.fps.toFixed(2)} fps`;
+							frameCountInfo.textContent = `${meta.frame_count} frames`;
+						} else {
+							fpsInfo.textContent = "Error fps";
+							frameCountInfo.textContent = "Error frames";
+						}
+					} catch (err) {
+						console.error("Failed to fetch video metadata:", err);
+					}
+				} else {
+					videoEl.style.display = "none";
+					statusDiv.style.display = "block";
+					statusDiv.textContent =
+						filename === "None" ? "No video (None)" : "No video selected";
 					resolutionInfo.style.display = "none";
 					fpsInfo.style.display = "none";
-                    frameCountInfo.style.display = "none";
-                }
-            };
-            const originalCallback = videoWidget.callback;
-            videoWidget.callback = function(value) {
-                if (originalCallback) originalCallback(value);
-                updateVideo();
-            };
-            setTimeout(updateVideo, 100);
-        }
-    }
+					frameCountInfo.style.display = "none";
+				}
+			};
+			const originalCallback = videoWidget.callback;
+			videoWidget.callback = (value) => {
+				if (originalCallback) originalCallback(value);
+				updateVideo();
+			};
+			setTimeout(updateVideo, 100);
+		}
+	},
 });
