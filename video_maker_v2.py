@@ -1,12 +1,12 @@
-import os
-import uuid
 import datetime
-import torch
-import numpy as np
-import folder_paths
+import json
+import os
+
 import av
 import comfy.utils
-import json
+import folder_paths
+import numpy as np
+
 
 class VideoMakerV2:
     NODE_NAME = "VideoMakerV2"
@@ -27,7 +27,7 @@ class VideoMakerV2:
                 "audio": ("AUDIO",)
             },
             "hidden": {
-                "prompt": "PROMPT", 
+                "prompt": "PROMPT",
                 "extra_pnginfo": "EXTRA_PNGINFO"
             }
         }
@@ -102,9 +102,9 @@ class VideoMakerV2:
                 for key, value in extra_pnginfo.items():
                     container.metadata[key] = json.dumps(value, ensure_ascii=False)
                     
-            print(f"[VideoMakerV2] Workflow metadata successfully embedded into container.")
+            print("[VideoMakerV2] Workflow metadata successfully embedded into container.")
         else:
-            print(f"[VideoMakerV2] Workflow embedding skipped by user request.")
+            print("[VideoMakerV2] Workflow embedding skipped by user request.")
 
         # Video stream setup
         video_stream = container.add_stream("libx264", rate=int(fps))

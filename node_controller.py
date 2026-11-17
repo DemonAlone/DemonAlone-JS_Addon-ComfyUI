@@ -1,6 +1,6 @@
 # based on AUNMultiUniversal from https://github.com/loz2754/AUN-ComfyUI-Nodes , MIT.
 import re
-from server import PromptServer
+
 
 class DA_NodeController:
     @classmethod

@@ -23,7 +23,7 @@ class SimpleLoopController:
 
     def control_loop(self, total, current_step, any_input=None):
         # If the state is idle (-1), start from step 0.
-        actual_step = 0 if current_step < 0 else current_step
+        actual_step = max(current_step, 0)
         
         print(f"[LoopController] Step {actual_step} of {total}")
         
@@ -35,7 +35,7 @@ class SimpleLoopController:
         else:
             ui_step = -1 # Return to rest state when finished
             is_finished = 1
-            print(f"[LoopController] Loop finished. Counter reset to idle (-1).")
+            print("[LoopController] Loop finished. Counter reset to idle (-1).")
 
         return {
             "result": (any_input, actual_step),

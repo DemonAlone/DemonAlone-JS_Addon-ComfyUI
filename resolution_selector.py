@@ -1,8 +1,11 @@
+from typing import ClassVar
+
+
 class DA_ResolutionSelector:
-    STEPS_LIST = [1, 4, 8, 16, 32, 64, 128, 256]
+    STEPS_LIST: ClassVar[list[int]] = [1, 4, 8, 16, 32, 64, 128, 256]
     
     # Fixed resolution preset
-    RESOLUTION_PRESETS = [
+    RESOLUTION_PRESETS: ClassVar[list[str]] = [
         "Custom / None",
         "1:1 Square (1024×1024)",
         "3:4 Portrait (864×1152)",

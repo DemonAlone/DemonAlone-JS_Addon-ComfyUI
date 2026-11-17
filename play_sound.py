@@ -2,6 +2,7 @@
 import os
 import time
 
+
 def get_audio_files():
     current_dir = os.path.dirname(os.path.realpath(__file__))
     web_dir = os.path.join(current_dir, "web")
@@ -49,11 +50,11 @@ class DA_PlaySound:
                 from server import PromptServer
                 if PromptServer.instance and hasattr(PromptServer.instance, 'prompt_queue'):
                     # Receive current tasks from the server's internal memory without network requests
-                    queue_running, queue_pending = PromptServer.instance.prompt_queue.get_current_queue()
+                    _queue_running, queue_pending = PromptServer.instance.prompt_queue.get_current_queue()
                     # If there are tasks in the pending queue besides the current one
                     if len(queue_pending) > 0:
                         should_play = False
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 # If in the future the internal API changes and the method fails - 
                 # log the error, but do not disable generation for the user
                 print(f"[DA_PlaySound] Internal queue check warning: {e}")
