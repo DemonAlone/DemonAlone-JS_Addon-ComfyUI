@@ -1,6 +1,8 @@
-import torch
 import itertools
+
+import torch
 from nodes import PreviewImage
+
 
 class DA_ImageComparer:
     @classmethod

@@ -1,17 +1,17 @@
-import os
-import folder_paths
-import torch
-import numpy as np
-import av
-from server import PromptServer
-from aiohttp import web
 import mimetypes
-import shutil
+import os
+
+import aiofiles
+import av
+import folder_paths
+import numpy as np
+import torch
+from aiohttp import web
+from server import PromptServer
 
 # Video folder (created automatically)
-video_input_folder = folder_paths.get_input_directory() # root input
+video_input_folder = folder_paths.get_input_directory() # root input for drag-and-drop
 
-# drag-and-drop
 @PromptServer.instance.routes.post("/uploadvideo")
 async def upload_video(request):
     data = await request.post()
@@ -20,14 +20,22 @@ async def upload_video(request):
         return web.Response(status=400, text="No file uploaded")
     
     filename = file.filename
-    # root input
+    # Security: use basename to prevent path traversal
     safe_filename = os.path.basename(filename)
     dest_path = os.path.join(video_input_folder, safe_filename)
     
-    # If file exists - overwrite
-    with open(dest_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    
+    # If file exists - overwrite. Using aiofiles to avoid blocking the event loop.
+    try:
+        async with aiofiles.open(dest_path, "wb") as f:
+            # Read in chunks to handle large files without high memory usage
+            while True:
+                chunk = file.file.read(8192)
+                if not chunk:
+                    break
+                await f.write(chunk)
+    except (OSError, ValueError) as e:
+        return web.Response(status=500, text=f"Failed to save file: {e}")
+
     return web.json_response({"name": safe_filename})
 
 
@@ -55,10 +63,10 @@ async def get_video_metadata(request):
         # Accurate FPS from container metadata
         fps = float(video_stream.average_rate) if video_stream.average_rate else 25.0
         
-        # Exact number of frames from titles
+        # Exact number of frames from stream properties
         frame_count = video_stream.frames
         if not frame_count or frame_count <= 0:
-            # # For WebM, compute frame count by duration of the stream
+            # For WebM or some containers, compute frame count by duration
             if video_stream.duration and video_stream.time_base:
                 frame_count = int(float(video_stream.duration * video_stream.time_base) * fps)
             elif container.duration:
@@ -69,7 +77,9 @@ async def get_video_metadata(request):
 
         container.close()
         return web.json_response({"fps": fps, "frame_count": frame_count})
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        # In a web endpoint, catching broad exceptions is often necessary to return 
+        # a proper HTTP error instead of crashing the server process.
         return web.json_response({"error": str(e)}, status=500)
 
 # Endpoint for serving video files (preview)
@@ -103,8 +113,8 @@ class LoadVideoNode:
             disk_files.sort()
             files.extend(disk_files)
             
-        if len(files) == 1: # So there is nothing except 'None'
-            files = ["None", "No video files found"]
+            if len(files) == 1: # So there is nothing except 'None'
+                files = ["None", "No video files found"]
         return {
             "required": {
                 "video": (files,),
@@ -117,8 +127,8 @@ class LoadVideoNode:
     FUNCTION = "load_video"
     CATEGORY = "video"
     DESCRIPTION = (
-            "Directly load videos into ComfyUI via drag-and-drop or button upload (MP4, AVI, MOV, MKV, WebM)."
-            "Outputs frames as an IMAGE batch and extracts audio, FPS, and frame count metadata. The 'max_frames' parameter limits the number of frames loaded (0 = all)."
+            "Directly load videos into ComfyUI via drag-and-drop or button upload (MP4, AVI, MOV, MKV, WebM). "
+            "Outputs frames as an IMAGE batch and extracts audio, FPS, and frame count metadata. The 'max_frames' parameter limits the number of frames loaded (0 = all). "
             "The output 'frame_count' reflects the actual number of frames loaded (after cropping). Features a built-in preview player with real-time display of resolution, FPS, and total frame count."
     )
     
@@ -134,7 +144,7 @@ class LoadVideoNode:
         # Handle 'None' selection or stub
         if video == "None" or video == "No video files found":
             # Return empty correct stubs so as not to break downstream nodes in the graph
-            empty_image = torch.zeros((1, 64, 64, 3), dtype=torch.float32)
+            # Removed unused empty_image variable
             return (None, None, 0.0, 0)
 
         video_path = os.path.join(video_input_folder, video)
