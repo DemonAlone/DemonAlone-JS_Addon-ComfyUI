@@ -4,20 +4,18 @@
 
 from __future__ import annotations
 
-import gc
 import json
 import logging
 import os
 import re
-import sys
-
-import numpy as np
-from PIL import Image
-from PIL.PngImagePlugin import PngInfo
+from typing import ClassVar
 
 import folder_paths
 import nodes as comfy_nodes
+import numpy as np
 from comfy.cli_args import args
+from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 
 from .a1111_format import build_parameters, sampler_label, scheduler_label
 from .graph_trace import MISSING, Graph, trace
@@ -48,7 +46,7 @@ def _jpeg_exif_bytes(img, user_comment):
         })
     except ImportError:
         pass
-    except Exception as exc:
+    except (RuntimeError, ValueError) as exc:
         log.warning("[Civitai Metadata] piexif could not build EXIF: %s", exc)
         return None
 
@@ -58,7 +56,7 @@ def _jpeg_exif_bytes(img, user_comment):
         exif = img.getexif()
         exif.get_ifd(_EXIF_SUB_IFD)[_EXIF_USER_COMMENT] = user_comment
         return exif.tobytes()
-    except Exception as exc:
+    except (AttributeError, KeyError, ValueError) as exc:
         log.warning("[Civitai Metadata] could not build EXIF via Pillow: %s", exc)
         return None
 
@@ -73,9 +71,9 @@ def _save_jpeg(img, path, parameters_text, quality):
             try:
                 img.save(path, format="JPEG", quality=quality, exif=exif_bytes)
                 return
-            except Exception:
+            except (OSError, RuntimeError) as exc:
                 log.warning("[Civitai Metadata] could not attach EXIF to %s; "
-                            "saving the JPEG without it", path)
+                            "saving the JPEG without it (%s)", path, exc)
     img.save(path, format="JPEG", quality=quality)
 
 PNG_FORMATS = ("PNG_with_workflow", "PNG_only_parameters", "PNG_with_no_meta")
@@ -104,7 +102,7 @@ class _ComfyAdapter:
                     return self.dynprompt.get_node(nid)
                 elif hasattr(self.dynprompt, "nodes"):
                     return self.dynprompt.nodes.get(nid)
-            except Exception as e:
+            except (AttributeError, TypeError) as e:
                 log.debug("[Civitai Metadata] Dynamic node lookup failed for %s: %s", nid, e)
 
         # If the dynamic search does not yield results, take from the static prompt graph
@@ -123,7 +121,7 @@ class _ComfyAdapter:
                 entry = self.cache.get(nid)
             else:
                 entry = self.cache[nid]
-        except Exception as e:
+        except (KeyError, AttributeError, TypeError) as e:
             log.debug("[Civitai Metadata] Cache read failed for node %s: %s", nid, e)
             return MISSING
         if entry is None:
@@ -131,7 +129,7 @@ class _ComfyAdapter:
         outputs = getattr(entry, "outputs", entry)
         try:
             value = outputs[slot]
-        except Exception as e:
+        except (IndexError, KeyError, TypeError) as e:
             log.debug("[Civitai Metadata] Output slot %s read failed for node %s: %s", slot, nid, e)
             return MISSING
         if isinstance(value, list):
@@ -140,14 +138,17 @@ class _ComfyAdapter:
 
     @staticmethod
     def get_class(class_type):
-        return comfy_nodes.NODE_CLASS_MAPPINGS.get(class_type)
+        try:
+            return comfy_nodes.NODE_CLASS_MAPPINGS.get(class_type)
+        except Exception:  # noqa: BLE001
+            return None
 
     def _index(self, category):
         if category not in self._indexes:
             index = {}
             try:
                 names = folder_paths.get_filename_list(category)
-            except Exception as e:
+            except (OSError, AttributeError) as e:
                 log.debug("[Civitai Metadata] Folder listing failed for %s: %s", category, e)
                 names = []
             for name in names:
@@ -162,7 +163,7 @@ class _ComfyAdapter:
             try:
                 if folder_paths.get_full_path(category, name):
                     return category, name
-            except Exception as e:
+            except (OSError, AttributeError) as e:
                 log.debug("[Civitai Metadata] Path lookup error for %s in %s: %s", name, category, e)
                 continue
 
@@ -178,7 +179,7 @@ class _ComfyAdapter:
     def resource_info(resource):
         try:
             full_path = folder_paths.get_full_path(resource.category, resource.filename)
-        except Exception:
+        except (OSError, AttributeError):
             full_path = None
         sha, version_id = HASH_STORE.info(full_path)
         return (sha[:10] if sha else None), version_id
@@ -248,16 +249,20 @@ class DA_SaveImage:
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("parameters",)
-    OUTPUT_TOOLTIPS = ("The A1111 parameters text written into the file "
-                       "(empty in *_with_no_meta modes).",)
+    OUTPUT_TOOLTIPS = (
+            "The A1111 parameters text written into the file. "
+            "empty in *_with_no_meta modes."
+    )
     FUNCTION = "save_images"
     OUTPUT_NODE = True
     CATEGORY = "image"
     DESCRIPTION = ("Saves images with A1111-style 'parameters' metadata that Civitai reads: "
                    "prompt, negative prompt, seed, steps, sampler, scheduler, CFG, size, model "
                    "and LoRA hashes, hires pass. PNG, JPEG, or no metadata at all.")
-    SEARCH_ALIASES = ["civitai", "civitai metadata", "a1111 metadata",
-                      "save with metadata", "metadata", "save jpeg"]
+    SEARCH_ALIASES: ClassVar[list[str]] = [
+        "civitai", "civitai metadata", "a1111 metadata",
+        "save with metadata", "metadata", "save jpeg"
+    ]
 
     # ------------------------------------------------------------------ label helpers
     @staticmethod
@@ -302,12 +307,11 @@ class DA_SaveImage:
         wants_workflow = file_format == "PNG_with_workflow"
 
         parameters = ""
-        
         if wants_parameters:
             try:
                 # First, attempt to gather parameters using the base SeeSee graph tracer
                 parameters = self._build(unique_id, dynprompt, prompt, width, height)
-            except Exception:
+            except (KeyError, AttributeError, TypeError, RuntimeError):
                 log.exception("[Civitai Metadata] could not build parameters for node %s; "
                               "saving without them", unique_id)
 
@@ -349,7 +353,7 @@ class DA_SaveImage:
         
         # Get path and file names. 
         # Even if parameters are empty (no_meta mode), ComfyUI will still return a path, but without parameters in PNGinfo
-        full_output_folder, filename, counter, subfolder, filename_prefix_comfy = \
+        full_output_folder, filename, counter, subfolder, _ = \
             folder_paths.get_save_image_path(prefix_to_use, self.output_dir, width, height)
 
         ext = ".jpg" if is_jpg else ".png"
