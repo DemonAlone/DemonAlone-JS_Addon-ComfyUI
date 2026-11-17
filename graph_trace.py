@@ -17,11 +17,11 @@ statically when the cache does not have it.
 
 from __future__ import annotations
 
+import logging
 import re
 from collections import deque
 from dataclasses import dataclass, field
 
-import logging
 log = logging.getLogger("demonalone.CivitaiMetadata.trace")
 
 
@@ -173,7 +173,7 @@ class Graph:
             elif attr == "RETURN_NAMES":
                 return getattr(cls, "RETURN_NAMES", None)
             return None
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
 
@@ -181,7 +181,7 @@ class Graph:
         types = self._class_attr(nid, "RETURN_TYPES")
         try:
             value = types[slot]
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
         return value if isinstance(value, str) else "COMBO"
 
@@ -189,7 +189,7 @@ class Graph:
         names = self._class_attr(nid, "RETURN_NAMES")
         try:
             return str(names[slot] or "")
-        except Exception:
+        except Exception:  # noqa: BLE001
             return ""
 
     def find_file(self, name, categories):
@@ -197,7 +197,7 @@ class Graph:
             return None
         try:
             return self._find_file(name, categories)
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     # ------------------------------------------------------------------ values
@@ -435,8 +435,8 @@ def _read_sampler(graph: Graph, nid) -> SamplerPass:
         if p.steps is None:
             sigmas = graph.resolve(ins["sigmas"])
             try:
-                p.steps = max(int(len(sigmas)) - 1, 0) or None
-            except Exception as e:
+                p.steps = max(len(sigmas) - 1, 0) or None
+            except Exception as e:  # noqa: BLE001
                 log.debug("[Civitai Metadata] Failed to calculate steps from sigmas: %s", e)
 
     if is_link(ins.get("guider")):
@@ -659,11 +659,11 @@ def _find_upscaler(graph: Graph, node_ids):
             name = graph.resolve_scalar(loader.get("model_name"), (str,))
             if name:
                 model_name = re.split(r"[\\/]", name)[-1]
-        if method is None and ("Upscale" in ct or ct.startswith("ImageScale") or "Resize" in ct):
-            if "upscale_method" in ins:
-                value = graph.resolve_scalar(ins["upscale_method"], (str,))
-                if value:
-                    method = f"Latent ({value})" if "Latent" in ct else value
+        if (method is None and ("Upscale" in ct or ct.startswith("ImageScale") or "Resize" in ct) 
+            and "upscale_method" in ins):
+            value = graph.resolve_scalar(ins["upscale_method"], (str,))
+            if value:
+                method = f"Latent ({value})" if "Latent" in ct else value
     return model_name or method
 
 def _find_embeddings(graph: Graph, texts):
