@@ -15,20 +15,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import threading
 import time
-import string
 
-import logging
 log = logging.getLogger("demonalone.CivitaiMetadata.hashes")
 
 def _read_json(path):
     try:
         with open(path, "r", encoding="utf-8") as handle:
             return json.load(handle)
-    except Exception:
+    except (OSError, ValueError):
         return None
 
 class HashStore:
@@ -50,7 +49,7 @@ class HashStore:
             with open(tmp, "w", encoding="utf-8") as handle:
                 json.dump(self._data, handle, indent=1, sort_keys=True)
             os.replace(tmp, self.cache_path)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             log.warning("[Civitai Metadata] could not write hash cache %s: %s", self.cache_path, exc)
 
     def info(self, full_path):
@@ -62,9 +61,12 @@ class HashStore:
             key = os.path.normcase(os.path.abspath(full_path))
             data = self._load()
             entry = data.get(key)
-            if entry and entry.get("size") == stat.st_size and entry.get("mtime") == int(stat.st_mtime):
-                if entry.get("sha256"):
-                    return entry["sha256"], entry.get("civitai_version_id")
+            
+            # SIM102 fix: combined nested if
+            if (entry and entry.get("size") == stat.st_size 
+                and entry.get("mtime") == int(stat.st_mtime) 
+                and entry.get("sha256")):
+                return entry["sha256"], entry.get("civitai_version_id")
 
             sha, version_id = self._from_sidecars(full_path, stat.st_size)
             if not sha:
@@ -94,18 +96,20 @@ class HashStore:
                 if isinstance(civitai, dict) and isinstance(civitai.get("id"), int):
                     version_id = civitai["id"]
 
+        
         info = _read_json(stem + ".civitai.info")
         if isinstance(info, dict):
             for file_entry in info.get("files") or []:
                 hashes = (file_entry or {}).get("hashes") or {}
                 candidate = hashes.get("SHA256")
-                if isinstance(candidate, str) and re.fullmatch(r"\b([0-9a-fA-F]{64})\b", candidate):
-                    if sha is None or sha == candidate.lower():
-                        sha = candidate.lower()
-                        if isinstance(info.get("id"), int):
-                            version_id = version_id or info["id"]
-                        break
-
+                # SIM102 fix: combined nested if
+                if (isinstance(candidate, str) and re.fullmatch(r"\b([0-9a-fA-F]{64})\b", candidate) 
+                    and (sha is None or sha == candidate.lower())):
+                    sha = candidate.lower()
+                    if isinstance(info.get("id"), int):
+                        version_id = version_id or info["id"]
+                    break
+        
         if sha is None:
             for candidate_path in (full_path + ".sha256", stem + ".sha256"):
                 try:
@@ -114,7 +118,7 @@ class HashStore:
                     if match:
                         sha = match.group(1).lower()
                         break
-                except Exception as e:
+                except (OSError, ValueError) as e:
                     log.debug("[Civitai Metadata] Sidecar file read failed for %s: %s", candidate_path, e)
                     continue
         return sha, version_id
@@ -124,7 +128,7 @@ class HashStore:
     def _compute(full_path, size):
         started = time.time()
         log.info("[Civitai Metadata] hashing %s (%.1f GB) - only the first time, the result is cached",
-                    os.path.basename(full_path), size / 1024 ** 3)
+                 os.path.basename(full_path), size / 1024 ** 3)
         digest = hashlib.sha256()
         try:
             with open(full_path, "rb") as handle:
@@ -133,7 +137,7 @@ class HashStore:
                     if not chunk:
                         break
                     digest.update(chunk)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             log.warning("[Civitai Metadata] could not hash %s: %s", full_path, exc)
             return None
         log.info("[Civitai Metadata] hashed %s in %.1fs", os.path.basename(full_path), time.time() - started)

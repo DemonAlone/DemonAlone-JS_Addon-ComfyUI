@@ -1,18 +1,18 @@
-from .load_video import LoadVideoNode
-from .play_sound import DA_PlaySound
-from .PresetFloat import PresetFloatNode
-from .PresetInt import PresetIntNode
-from .LoopController import SimpleLoopController
-from .prompt_formatter import DA_PromptFormatter
-from .NodeController import DA_NodeController
-from .GroupController import DA_GroupController
-from .VideoMaker_v2 import VideoMakerV2
-from .load_video_nodes2 import LoadVideoNodes2
-from .ResolutionSelector import DA_ResolutionSelector
-from .DA_AnySwitch import DA_AnySwitch
-from .image_comparer import DA_ImageComparer
 from .civitai_save import DA_SaveImage
-from .DynamicSliderNode import DA_DynamicSliderNode
+from .da_anyswitch import DA_AnySwitch
+from .dynamic_slider_node import DA_DynamicSliderNode
+from .group_controller import DA_GroupController
+from .image_comparer import DA_ImageComparer
+from .load_video import LoadVideoNode
+from .load_video_nodes2 import LoadVideoNodes2
+from .loop_controller import SimpleLoopController
+from .node_controller import DA_NodeController
+from .play_sound import DA_PlaySound
+from .preset_float import PresetFloatNode
+from .preset_int import PresetIntNode
+from .prompt_formatter import DA_PromptFormatter
+from .resolution_selector import DA_ResolutionSelector
+from .video_maker_v2 import VideoMakerV2
 
 NODE_CLASS_MAPPINGS = {
     "DA_AnySwitch": DA_AnySwitch,

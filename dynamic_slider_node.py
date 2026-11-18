@@ -29,7 +29,7 @@ class DA_DynamicSliderNode:
         if type == "INT":
             # Logic for integers
             if min_int >= max_int: max_int = min_int + 1
-            if step_int < 1: step_int = 1
+            step_int = max(step_int, 1)
             
             clamped = max(min_int, min(max_int, value_int))
             steps = round((clamped - min_int) / step_int)
