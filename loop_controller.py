@@ -24,11 +24,11 @@ class SimpleLoopController:
     def control_loop(self, total, current_step, any_input=None):
         # If the state is idle (-1), start from step 0.
         actual_step = max(current_step, 0)
-        
+
         print(f"[LoopController] Step {actual_step} of {total}")
-        
+
         next_step = actual_step + 1
-        
+
         if next_step < total:
             ui_step = next_step
             is_finished = 0

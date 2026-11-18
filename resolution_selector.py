@@ -3,7 +3,7 @@ from typing import ClassVar
 
 class DA_ResolutionSelector:
     STEPS_LIST: ClassVar[list[int]] = [1, 4, 8, 16, 32, 64, 128, 256]
-    
+
     # Fixed resolution preset
     RESOLUTION_PRESETS: ClassVar[list[str]] = [
         "Custom / None",
@@ -51,7 +51,7 @@ class DA_ResolutionSelector:
                 step = int(step_size)
             except ValueError:
                 step = 1
-                
+
             if step > 1:
                 w = round(w / step) * step
                 h = round(h / step) * step

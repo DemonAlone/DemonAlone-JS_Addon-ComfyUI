@@ -1,4 +1,4 @@
-#based on ComfyUI-SeeSee-Civitai-Metadata from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
+#based on ComfyUI-SeeSee-Civitai-Metadata from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata
 # Copyright (c) 2026 seesee75
 # Save Image (Civitai Metadata): a drop-in replacement for ComfyUI's Save Image node.
 
@@ -231,11 +231,11 @@ class DA_SaveImage:
             },
             "optional": {
                 "positive_text": ("STRING", {
-                    "forceInput": True, 
+                    "forceInput": True,
                     "tooltip": "Optional direct link for Positive prompt string. Overrides auto-trace."
                 }),
                 "negative_text": ("STRING", {
-                    "forceInput": True, 
+                    "forceInput": True,
                     "tooltip": "Optional direct link for Negative prompt string. Overrides auto-trace."
                 }),
             },
@@ -318,17 +318,17 @@ class DA_SaveImage:
         # 2. PRIORITY OVERRIDE: If custom text inputs are connected
         if positive_text is not None or negative_text is not None:
             log.info("[Civitai Metadata] Custom prompt text links detected. Overriding automatic text trace.")
-            
+
             pos_str = str(positive_text or "").strip()
             neg_str = str(negative_text or "").strip()
-            
+
             # Constructs a valid A1111 text block
             custom_meta = ""
             if pos_str:
                 custom_meta += f"{pos_str}\n"
             if neg_str:
                 custom_meta += f"Negative prompt: {neg_str}\n"
-            
+
             # If the base SeeSee parser found sampler technical data (Steps:, Sampler:, etc.)
             if parameters and "Steps:" in parameters:
                 # Isolate only the line containing A1111 technical parameters (usually the last line)
@@ -350,20 +350,20 @@ class DA_SaveImage:
         # 3. DETERMINE PATH AND FILE NAMES (This must be OUTSIDE any text condition loops)
         # We get the prefix, applying the label only if it exists in the template
         prefix_to_use = self._apply_label(filename_prefix, label)
-        
-        # Get path and file names. 
+
+        # Get path and file names.
         # Even if parameters are empty (no_meta mode), ComfyUI will still return a path, but without parameters in PNGinfo
         full_output_folder, filename, counter, subfolder, _ = \
             folder_paths.get_save_image_path(prefix_to_use, self.output_dir, width, height)
 
         ext = ".jpg" if is_jpg else ".png"
         results = []
-        
+
         # 4. SAVE LOOP
         for batch_number, image in enumerate(images):
             array = 255.0 * image.cpu().numpy()
             img = Image.fromarray(np.clip(array, 0, 255).astype(np.uint8))
-            
+
             # Construct file name
             file_name_base = filename.replace('%batch_num%', str(batch_number))
             file = f"{file_name_base}_{counter:05}_{ext}"

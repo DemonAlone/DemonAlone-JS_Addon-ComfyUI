@@ -1,4 +1,4 @@
-#based on ComfyUI-SeeSee-Civitai-Metadata from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
+#based on ComfyUI-SeeSee-Civitai-Metadata from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata
 # Copyright (c) 2026 seesee75
 """Walk a ComfyUI prompt graph backwards from a save node and recover the generation
 parameters that produced the image.
@@ -659,7 +659,7 @@ def _find_upscaler(graph: Graph, node_ids):
             name = graph.resolve_scalar(loader.get("model_name"), (str,))
             if name:
                 model_name = re.split(r"[\\/]", name)[-1]
-        if (method is None and ("Upscale" in ct or ct.startswith("ImageScale") or "Resize" in ct) 
+        if (method is None and ("Upscale" in ct or ct.startswith("ImageScale") or "Resize" in ct)
             and "upscale_method" in ins):
             value = graph.resolve_scalar(ins["upscale_method"], (str,))
             if value:

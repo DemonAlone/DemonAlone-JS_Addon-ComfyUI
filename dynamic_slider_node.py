@@ -30,21 +30,21 @@ class DA_DynamicSliderNode:
             # Logic for integers
             if min_int >= max_int: max_int = min_int + 1
             step_int = max(step_int, 1)
-            
+
             clamped = max(min_int, min(max_int, value_int))
             steps = round((clamped - min_int) / step_int)
             final_val = int(min_int + (steps * step_int))
             return (final_val,)
-            
+
         else:
             # Logic for floats
             if min_float >= max_float: max_float = min_float + step_float
             if step_float <= 0: step_float = 0.01
-            
+
             clamped = max(min_float, min(max_float, value_float))
             steps = round((clamped - min_float) / step_float)
             final_val = min_float + (steps * step_float)
-            
+
             # Round to a reasonable precision to avoid 0.3000000004
             precision = max(0, -int(f"{step_float:e}".split('e-')[1]) if 'e-' in f"{step_float:e}" else 0) + 1
             return (round(final_val, min(precision, 6)),)

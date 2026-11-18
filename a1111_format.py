@@ -1,4 +1,4 @@
-#this file with no changes from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
+#this file with no changes from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata
 # Copyright (c) 2026 seesee75
 """Turn a traced generation into the A1111 "parameters" text Civitai reads.
 

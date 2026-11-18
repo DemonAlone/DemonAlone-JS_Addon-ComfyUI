@@ -6,6 +6,9 @@ import av
 import comfy.utils
 import folder_paths
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class VideoMakerV2:
@@ -49,17 +52,17 @@ class VideoMakerV2:
         else:
             base_dir = folder_paths.get_temp_directory()
             dir_type = "temp"
-        
+
         # --- Date Logic ---
         current_date = datetime.datetime.now()
         date_str = current_date.strftime("%Y-%m-%d")
-        
+
         if use_date_mask:
             year = str(current_date.year).zfill(4)
             month = str(current_date.month).zfill(2)
             day = str(current_date.day).zfill(2)
             date_str = custom_date_format.replace("yyyy", year).replace("mm", month).replace("dd", day)
-        
+
         if "%date%" in filename:
             filename = filename.replace("%date%", date_str)
 
@@ -69,10 +72,10 @@ class VideoMakerV2:
         safe_name = os.path.normpath(filename).lstrip("/").lstrip("\\")
         if os.path.isabs(safe_name) or safe_name.startswith(".."):
             safe_name = "video.mp4"
-        
+
         full_path = os.path.join(base_dir, safe_name)
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
-        
+
         # Prevent overwriting
         name, ext = os.path.splitext(full_path)
         counter = 1
@@ -82,29 +85,29 @@ class VideoMakerV2:
 
         # --- PyAV Encoding Setup ---
         height, width = images.shape[1], images.shape[2]
-        
+
         # Ensure dimensions are even (required for many h264 profiles)
         enc_width = width if width % 2 == 0 else width - 1
         enc_height = height if height % 2 == 0 else height - 1
 
         # correct flag movflags
         container_options = {"movflags": "use_metadata_tags+faststart"}
-        
+
         # Open the container
         container = av.open(full_path, mode="w", format="mp4", options=container_options)
-        
+
         # --- Native metadata injection (Wrapped in toggle embed_workflow) ---
         if embed_workflow:
             if prompt is not None:
                 container.metadata["prompt"] = json.dumps(prompt, ensure_ascii=False)
-                
+
             if extra_pnginfo is not None:
                 for key, value in extra_pnginfo.items():
                     container.metadata[key] = json.dumps(value, ensure_ascii=False)
-                    
-            print("[VideoMakerV2] Workflow metadata successfully embedded into container.")
+
+            logger.info("[VideoMakerV2] Workflow metadata successfully embedded into container.")
         else:
-            print("[VideoMakerV2] Workflow embedding skipped by user request.")
+            logger.info("[VideoMakerV2] Workflow embedding skipped by user request.")
 
         # Video stream setup
         video_stream = container.add_stream("libx264", rate=int(fps))
@@ -118,11 +121,11 @@ class VideoMakerV2:
         audio_data_np = None
         sample_rate = 44100
         channels = 2
-        
+
         if audio is not None and "waveform" in audio:
             waveform = audio["waveform"].cpu().numpy()
             sample_rate = audio["sample_rate"]
-            
+
             if waveform.ndim == 3 and waveform.shape[0] == 1:
                 waveform = waveform.squeeze(0)
             if waveform.ndim == 2:
@@ -131,7 +134,7 @@ class VideoMakerV2:
             elif waveform.ndim == 1:
                 waveform = waveform.reshape(1, -1)
             channels = waveform.shape[0]
-            
+
             # Trimming audio to video length if requested
             video_duration = len(images) / fps
             audio_duration = waveform.shape[1] / sample_rate
@@ -140,7 +143,7 @@ class VideoMakerV2:
                 waveform = waveform[:, :max_samples]
 
             audio_data_np = waveform
-            
+
             audio_stream = container.add_stream("aac", rate=sample_rate)
             # Set the layout correctly via a string instead of directly assigning channels
             audio_stream.layout = "stereo" if channels == 2 else "mono"
@@ -153,7 +156,7 @@ class VideoMakerV2:
         # --- Writing Video Frames ---
         for idx, img_tensor in enumerate(images):
             img_np = (img_tensor.cpu().numpy() * 255).astype(np.uint8)
-            
+
             # Resize/crop if dimensions were adjusted to even numbers
             if img_np.shape[1] != enc_width or img_np.shape[0] != enc_height:
                 img_np = img_np[:enc_height, :enc_width]
@@ -161,7 +164,7 @@ class VideoMakerV2:
             frame = av.VideoFrame.from_ndarray(img_np, format="rgb24")
             for packet in video_stream.encode(frame):
                 container.mux(packet)
-            
+
             # Update the progress bar on each frame
             pbar.update_absolute(idx + 1, total_frames)
 
@@ -174,11 +177,11 @@ class VideoMakerV2:
             total_samples = audio_data_np.shape[1]
             chunk_size = 1024
             layout_str = "stereo" if channels == 2 else "mono"
-            
+
             for i in range(0, total_samples, chunk_size):
                 chunk = audio_data_np[:, i:i + chunk_size]
                 current_chunk_samples = chunk.shape[1]
-                
+
                 if current_chunk_samples < chunk_size:
                     padded = np.zeros((channels, chunk_size), dtype=np.float32)
                     padded[:, :current_chunk_samples] = chunk
@@ -188,11 +191,11 @@ class VideoMakerV2:
                     samples_to_encode = current_chunk_samples
 
                 chunk_int16 = (chunk * 32767).astype(np.int16)
-                
+
                 # Creating an audio frame via the standard constructor and populating the memory buffer with bytes
                 audio_frame = av.AudioFrame(format="s16", layout=layout_str, samples=samples_to_encode)
                 audio_frame.sample_rate = sample_rate
-                
+
                 # Writing the interleaved array into the first plane's buffer
                 interleaved_bytes = chunk_int16.T.tobytes()
                 audio_frame.planes[0].update(interleaved_bytes)
@@ -204,13 +207,13 @@ class VideoMakerV2:
                 container.mux(packet)
 
         container.close()
-        
+
         # --- End of the injection block and return data to ComfyUI ---
         relative_path = os.path.relpath(full_path, base_dir).replace("\\", "/")
-        print(f"[VideoMakerV2] Video saved to {dir_type}: {relative_path}")
+        logger.info("[VideoMakerV2] Video saved to %s: %s", dir_type, relative_path)
 
         last_frame = images[-1].unsqueeze(0)
-        
+
         # Divide the path to generate a standard response in the Assets tab
         parts = relative_path.split('/')
         filename_only = parts[-1]
@@ -228,7 +231,7 @@ class VideoMakerV2:
             "type": dir_type,   # Pass 'temp' or 'output'
             "format": "video/mp4"
         }]
-        
+
         return {
             "ui": ui_output,
             "result": (last_frame,)
