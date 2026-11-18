@@ -67,8 +67,8 @@ class DA_NodeController:
     CATEGORY = "Node Control"
     OUTPUT_NODE = True
     DESCRIPTION = (
-        "Use the context menu to switch between full and compact modes."
-        "DA Node Controller: Consolidates Bypass and Mute logic into one dynamic node."
+        "Use the context menu to switch between full and compact modes. "
+        "DA Node Controller: Consolidates Bypass and Mute logic into one dynamic node. "
         "Set the mode and number of slots, then manage multiple node groups instantly."
     )
 
@@ -85,7 +85,8 @@ class DA_NodeController:
 
     def execute(self, mode="Bypass", slot_count=3, toggle_restriction="default", unique_id=None, **kwargs):
         try:
-            state_changes = self._compute_state_changes(mode)
+            # State changes are handled by JS, stay there the method for potential future use or consistency
+            self._compute_state_changes(mode)
 
             id_states = {}
             title_states = {}
@@ -124,6 +125,6 @@ class DA_NodeController:
 
             return ()
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"[DA_NodeController] Error: {e}")
             return ()

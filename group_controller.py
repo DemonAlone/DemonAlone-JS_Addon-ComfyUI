@@ -1,6 +1,7 @@
 # based on AUNMultiGroupUniversal and AUNMultiUniversal from https://github.com/loz2754/AUN-ComfyUI-Nodes , MIT.
 import re
 
+
 class DA_GroupController:
     @classmethod
     def INPUT_TYPES(cls):
@@ -61,8 +62,8 @@ class DA_GroupController:
     CATEGORY = "Node Control"
     OUTPUT_NODE = True
     DESCRIPTION = (
-        "Use the context menu to switch between full and compact modes."
-        "DA Group Controller: Manages node groups by Title (display name)."
+        "Use the context menu to switch between full and compact modes. "
+        "DA Group Controller: Manages node groups by Title (display name). "
         "Set the mode and number of slots, then control multiple groups instantly."
     )
 
@@ -81,8 +82,6 @@ class DA_GroupController:
         try:
             if slot_count == 1:
                 AllSwitch = False
-
-            state_changes = self._compute_state_changes(mode)
 
             # Only Title targeting
             title_states = {}
@@ -111,6 +110,6 @@ class DA_GroupController:
             # No need to send events from Python; all logic is in JS.
             return ()
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"[DA_GroupController] Error: {e}")
             return ()
