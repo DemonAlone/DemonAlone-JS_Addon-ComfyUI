@@ -1,3 +1,7 @@
+## 3.5.0
+- Cleanup, formatting and bugfix for python part.
+- Added dependencies and requirements.txt
+
 ## 3.4.0
 - Cleanup, formatting and bugfix for JS part.
 
