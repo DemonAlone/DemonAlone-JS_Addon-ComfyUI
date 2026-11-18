@@ -1,4 +1,4 @@
-#based on ComfyUI-SeeSee-Civitai-Metadata from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata 
+#based on ComfyUI-SeeSee-Civitai-Metadata from https://github.com/seesee75-commits/ComfyUI-SeeSee-Civitai-Metadata
 # Copyright (c) 2026 seesee75
 """SHA256 of model files, cached, with Civitai version ids where a sidecar knows them.
 
@@ -61,10 +61,10 @@ class HashStore:
             key = os.path.normcase(os.path.abspath(full_path))
             data = self._load()
             entry = data.get(key)
-            
+
             # SIM102 fix: combined nested if
-            if (entry and entry.get("size") == stat.st_size 
-                and entry.get("mtime") == int(stat.st_mtime) 
+            if (entry and entry.get("size") == stat.st_size
+                and entry.get("mtime") == int(stat.st_mtime)
                 and entry.get("sha256")):
                 return entry["sha256"], entry.get("civitai_version_id")
 
@@ -96,20 +96,20 @@ class HashStore:
                 if isinstance(civitai, dict) and isinstance(civitai.get("id"), int):
                     version_id = civitai["id"]
 
-        
+
         info = _read_json(stem + ".civitai.info")
         if isinstance(info, dict):
             for file_entry in info.get("files") or []:
                 hashes = (file_entry or {}).get("hashes") or {}
                 candidate = hashes.get("SHA256")
                 # SIM102 fix: combined nested if
-                if (isinstance(candidate, str) and re.fullmatch(r"\b([0-9a-fA-F]{64})\b", candidate) 
+                if (isinstance(candidate, str) and re.fullmatch(r"\b([0-9a-fA-F]{64})\b", candidate)
                     and (sha is None or sha == candidate.lower())):
                     sha = candidate.lower()
                     if isinstance(info.get("id"), int):
                         version_id = version_id or info["id"]
                     break
-        
+
         if sha is None:
             for candidate_path in (full_path + ".sha256", stem + ".sha256"):
                 try:

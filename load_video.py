@@ -1,104 +1,12 @@
-import mimetypes
 import os
 
-import aiofiles
 import av
 import folder_paths
 import numpy as np
 import torch
-from aiohttp import web
-from server import PromptServer
 
 # Video folder (created automatically)
 video_input_folder = folder_paths.get_input_directory() # root input for drag-and-drop
-
-@PromptServer.instance.routes.post("/uploadvideo")
-async def upload_video(request):
-    data = await request.post()
-    file = data.get("file")
-    if not file:
-        return web.Response(status=400, text="No file uploaded")
-    
-    filename = file.filename
-    # Security: use basename to prevent path traversal
-    safe_filename = os.path.basename(filename)
-    dest_path = os.path.join(video_input_folder, safe_filename)
-    
-    # If file exists - overwrite. Using aiofiles to avoid blocking the event loop.
-    try:
-        async with aiofiles.open(dest_path, "wb") as f:
-            # Read in chunks to handle large files without high memory usage
-            while True:
-                chunk = file.file.read(8192)
-                if not chunk:
-                    break
-                await f.write(chunk)
-    except (OSError, ValueError) as e:
-        return web.Response(status=500, text=f"Failed to save file: {e}")
-
-    return web.json_response({"name": safe_filename})
-
-
-# Endpoint for instant metadata retrieval without frame decoding
-@PromptServer.instance.routes.get("/get_video_metadata")
-async def get_video_metadata(request):
-    filename = request.query.get("file")
-    if not filename or filename == "None":
-        return web.Response(status=400, text="Missing file parameter")
-    
-    safe_path = os.path.abspath(os.path.join(video_input_folder, filename))
-    if not safe_path.startswith(os.path.abspath(video_input_folder)):
-        return web.Response(status=403, text="Forbidden")
-    if not os.path.exists(safe_path):
-        return web.Response(status=404, text="File not found")
-
-    try:
-        container = av.open(safe_path)
-        video_stream = next((s for s in container.streams if s.type == 'video'), None)
-        
-        if video_stream is None:
-            container.close()
-            return web.json_response({"error": "No video stream found"}, status=400)
-
-        # Accurate FPS from container metadata
-        fps = float(video_stream.average_rate) if video_stream.average_rate else 25.0
-        
-        # Exact number of frames from stream properties
-        frame_count = video_stream.frames
-        if not frame_count or frame_count <= 0:
-            # For WebM or some containers, compute frame count by duration
-            if video_stream.duration and video_stream.time_base:
-                frame_count = int(float(video_stream.duration * video_stream.time_base) * fps)
-            elif container.duration:
-                # Total container duration in microseconds (AV_TIME_BASE = 1000000)
-                frame_count = int((container.duration / 1000000.0) * fps)
-            else:
-                frame_count = 0
-
-        container.close()
-        return web.json_response({"fps": fps, "frame_count": frame_count})
-    except Exception as e:  # noqa: BLE001
-        # In a web endpoint, catching broad exceptions is often necessary to return 
-        # a proper HTTP error instead of crashing the server process.
-        return web.json_response({"error": str(e)}, status=500)
-
-# Endpoint for serving video files (preview)
-@PromptServer.instance.routes.get("/inputvideo")
-async def serve_input_video(request):
-    filename = request.query.get("file")
-    if not filename or filename == "None":
-        return web.Response(status=400, text="Missing file parameter")
-    # Security: check path is within folder
-    safe_path = os.path.abspath(os.path.join(video_input_folder, filename))
-    if not safe_path.startswith(os.path.abspath(video_input_folder)):
-        return web.Response(status=403, text="Forbidden")
-    if not os.path.exists(safe_path):
-        return web.Response(status=404, text="File not found")
-    # Determine mime-type
-    mime_type, _ = mimetypes.guess_type(safe_path)
-    if not mime_type:
-        mime_type = "video/mp4"
-    return web.FileResponse(safe_path, headers={"Content-Type": mime_type})
 
 class LoadVideoNode:
     @classmethod
@@ -112,7 +20,7 @@ class LoadVideoNode:
                     disk_files.append(f)
             disk_files.sort()
             files.extend(disk_files)
-            
+
             if len(files) == 1: # So there is nothing except 'None'
                 files = ["None", "No video files found"]
         return {
@@ -131,7 +39,7 @@ class LoadVideoNode:
             "Outputs frames as an IMAGE batch and extracts audio, FPS, and frame count metadata. The 'max_frames' parameter limits the number of frames loaded (0 = all). "
             "The output 'frame_count' reflects the actual number of frames loaded (after cropping). Features a built-in preview player with real-time display of resolution, FPS, and total frame count."
     )
-    
+
     OUTPUT_NODE = False
     OUTPUT_TOOLTIPS = (
         "Batch of video frames as images (torch.Tensor) [N, H, W, C]",
@@ -139,7 +47,7 @@ class LoadVideoNode:
         "Frames per second of the video (float)",
         "Actual number of frames loaded, respecting the 'max_frames' limit"
     )
-    
+
     def load_video(self, video, max_frames):
         # Handle 'None' selection or stub
         if video == "None" or video == "No video files found":

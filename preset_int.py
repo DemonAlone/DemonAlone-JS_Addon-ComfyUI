@@ -16,7 +16,7 @@ class PresetIntNode:
                 # Dropdown list of presets
                 "preset": (list(cls.PRESETS.keys()),),
                 # The slider itself. Since ComfyUI reads INPUT_TYPES once at startup,
-                # we set universal wide ranges here, and perform strict validation 
+                # we set universal wide ranges here, and perform strict validation
                 # in the execute() function.
                 "value": ("INT", {"default": 0, "min": 0, "max": 2147483647, "step": 1}),
             }
@@ -30,7 +30,7 @@ class PresetIntNode:
     def execute(self, preset, value):
         # Get parameters of the selected preset
         p_config = self.PRESETS.get(preset, {"min": 0, "max": 2147483647, "step": 1})
-        
+
         min_val = p_config["min"]
         max_val = p_config["max"]
         step = p_config["step"]
@@ -39,7 +39,7 @@ class PresetIntNode:
         clamped_val = max(min_val, min(max_val, value))
 
         # 2. Align to the step (for integers, this is just ensuring it's a multiple of step relative to min)
-        # Since step is always 1 in your request, strict alignment isn't mathematically complex, 
+        # Since step is always 1 in your request, strict alignment isn't mathematically complex,
         # but we ensure it stays on the grid defined by min + k*step.
         final_val = clamped_val
 

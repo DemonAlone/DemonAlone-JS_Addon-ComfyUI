@@ -13,6 +13,7 @@ from .preset_int import PresetIntNode
 from .prompt_formatter import DA_PromptFormatter
 from .resolution_selector import DA_ResolutionSelector
 from .video_maker_v2 import VideoMakerV2
+from . import video_routes  # noqa: F401
 
 NODE_CLASS_MAPPINGS = {
     "DA_AnySwitch": DA_AnySwitch,
@@ -23,13 +24,13 @@ NODE_CLASS_MAPPINGS = {
     "DA_PlaySound": DA_PlaySound,
     "DA_PromptFormatter": DA_PromptFormatter,
     "DA_ResolutionSelector": DA_ResolutionSelector,
-    "DA_SaveImage": DA_SaveImage,   
+    "DA_SaveImage": DA_SaveImage,
     "LoadVideoNode": LoadVideoNode,
     "LoadVideoNodes2": LoadVideoNodes2,
     "PresetFloatNode": PresetFloatNode,
     "PresetIntNode": PresetIntNode,
     "SimpleLoopController": SimpleLoopController,
-    "VideoMakerV2": VideoMakerV2, 
+    "VideoMakerV2": VideoMakerV2,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {

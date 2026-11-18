@@ -44,7 +44,7 @@ class DA_PlaySound:
 
     def play_sound(self, volume, play_only_when_queue_empty, audio_file, duration, any_input=None, **kwargs):
         should_play = True
-        
+
         if play_only_when_queue_empty:
             try:
                 from server import PromptServer
@@ -55,7 +55,7 @@ class DA_PlaySound:
                     if len(queue_pending) > 0:
                         should_play = False
             except Exception as e:  # noqa: BLE001
-                # If in the future the internal API changes and the method fails - 
+                # If in the future the internal API changes and the method fails -
                 # log the error, but do not disable generation for the user
                 print(f"[DA_PlaySound] Internal queue check warning: {e}")
 
@@ -68,5 +68,5 @@ class DA_PlaySound:
             }
             ui_data = {"da_play_audio": [ui_span]}
             print(f"[DA_PlaySound] Sending JS playback signal: {audio_file}")
-        
+
         return {"ui": ui_data, "result": (any_input,)}

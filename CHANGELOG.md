@@ -1,3 +1,7 @@
+## 3.5.5
+- Moved Endpoints for load_video and load_video_nodes2
+- Formatting and security fix.
+
 ## 3.5.0
 - Cleanup, formatting and bugfix for python part.
 - Added dependencies and requirements.txt

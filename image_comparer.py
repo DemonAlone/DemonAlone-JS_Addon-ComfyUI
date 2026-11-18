@@ -61,6 +61,6 @@ class DA_ImageComparer:
             })
 
         return {
-            "ui": {"comparer_data": processed_images}, 
+            "ui": {"comparer_data": processed_images},
             "result": (pure_output,)
         }
