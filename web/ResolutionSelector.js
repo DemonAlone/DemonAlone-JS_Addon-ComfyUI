@@ -319,47 +319,173 @@ app.registerExtension({
 					"button",
 					"Read Image Resolution",
 					null,
-					() => {
+					async () => {
 						const imageInputIndex = node.inputs
 							? node.inputs.findIndex((i) => i.name === "image")
 							: -1;
 						if (imageInputIndex === -1) return;
 
 						const linkId = node.inputs[imageInputIndex].link;
-						if (linkId && app.graph.links?.[linkId]) {
-							const link = app.graph.links[linkId];
-							const originNode = app.graph.getNodeById(link.origin_id);
-							if (originNode) {
-								let fw, fh;
-								if (
-									originNode.imgs &&
-									originNode.imgs.length > 0 &&
-									originNode.imgs[0].naturalWidth
-								) {
-									fw = originNode.imgs[0].naturalWidth;
-									fh = originNode.imgs[0].naturalHeight;
-								} else {
-									// Fallback to widgets
-									const origW = originNode.widgets?.find(
-										(w) => w.name === "width" || w.name === "image_width",
-									)?.value;
-									const origH = originNode.widgets?.find(
-										(w) => w.name === "height" || w.name === "image_height",
-									)?.value;
-									if (origW && origH) {
-										fw = origW;
-										fh = origH;
-									}
-								}
+						if (!linkId || !app.graph.links?.[linkId]) return;
 
-								if (fw && fh) {
-									const [constrainedW, constrainedH] = applyConstraints(fw, fh);
-									widthWidget.value = constrainedW;
-									heightWidget.value = constrainedH;
-									refreshUIValues();
+						const link = app.graph.links[linkId];
+						const originNode = app.graph.getNodeById(link.origin_id);
+						if (!originNode) return;
+
+						let fw, fh;
+
+						// PRIORITY 1: Looking for widgets with real sizes
+						if (originNode.widgets) {
+							const sizeWidgets = [
+								{ w: "width", h: "height" },
+								{ w: "image_width", h: "image_height" },
+								{ w: "output_width", h: "output_height" },
+							];
+
+							for (const pair of sizeWidgets) {
+								const wWidget = originNode.widgets.find(
+									(w) => w.name === pair.w,
+								);
+								const hWidget = originNode.widgets.find(
+									(w) => w.name === pair.h,
+								);
+
+								if (
+									wWidget &&
+									hWidget &&
+									wWidget.value !== undefined &&
+									hWidget.value !== undefined
+								) {
+									const tempW = parseInt(wWidget.value, 10);
+									const tempH = parseInt(hWidget.value, 10);
+									if (tempW > 0 && tempH > 0) {
+										fw = tempW;
+										fh = tempH;
+										break;
+									}
 								}
 							}
 						}
+
+						// PRIORITY 2: Load the original image via the API
+						if (!fw || !fh) {
+							try {
+								let imageData = null;
+
+								// For the Load Image node we get a full description of the image
+								if (originNode.widgets) {
+									const imageWidget = originNode.widgets.find(
+										(w) => w.name === "image" || w.name === "upload",
+									);
+
+									if (imageWidget?.value) {
+										/// imageWidget.value can be an object or a string
+										if (typeof imageWidget.value === "object") {
+											imageData = imageWidget.value;
+										} else {
+											// If it's a string, parse it
+											// Format usually: 'filename.png [type: input, subfolder: ]'
+											const match = imageWidget.value.match(
+												/^(.+?)\s*\[type:\s*(\w+),\s*subfolder:\s*(.*?)\]/,
+											);
+											if (match) {
+												imageData = {
+													filename: match[1],
+													type: match[2],
+													subfolder: match[3] || "",
+												};
+											} else {
+												// Simple fallback
+												imageData = {
+													filename: imageWidget.value,
+													type: "input",
+													subfolder: "",
+												};
+											}
+										}
+									}
+								}
+
+								// Alternative way: extract from imgs[0].src
+								if (
+									!imageData &&
+									originNode.imgs &&
+									originNode.imgs.length > 0
+								) {
+									const imgSrc = originNode.imgs[0].src;
+									if (imgSrc) {
+										const params = new URLSearchParams(imgSrc.split("?")[1]);
+										imageData = {
+											filename: params.get("filename") || "",
+											type: params.get("type") || "input",
+											subfolder: params.get("subfolder") || "",
+										};
+									}
+								}
+
+								if (imageData?.filename) {
+									// Build the correct URL with all parameters
+									const params = new URLSearchParams();
+									params.set("filename", imageData.filename);
+									params.set("type", imageData.type || "input");
+									if (imageData.subfolder) {
+										params.set("subfolder", imageData.subfolder);
+									}
+
+									const imageUrl = `/view?${params.toString()}`;
+
+									// Create a temporary image to get real dimensions
+									const tempImg = new Image();
+									tempImg.onload = () => {
+										fw = tempImg.naturalWidth;
+										fh = tempImg.naturalHeight;
+
+										if (fw && fh) {
+											const [constrainedW, constrainedH] = applyConstraints(
+												fw,
+												fh,
+											);
+											widthWidget.value = constrainedW;
+											heightWidget.value = constrainedH;
+											refreshUIValues();
+											node.setDirtyCanvas(true, true);
+										}
+									};
+									tempImg.onerror = () => {
+										console.warn(
+											"[DA_ResolutionSelector] Failed to load image:",
+											imageUrl,
+										);
+									};
+									tempImg.src = imageUrl;
+									return; // Exit, the update will occur in onload
+								}
+							} catch (e) {
+								console.warn(
+									"[DA_ResolutionSelector] Failed to load image metadata:",
+									e,
+								);
+							}
+						}
+
+						// PRIORITY 3: Fallback on imgs (can be preview in downscaled mode)
+						if (!fw || !fh) {
+							if (originNode.imgs && originNode.imgs.length > 0) {
+								const img = originNode.imgs[0];
+								if (img.naturalWidth && img.naturalHeight) {
+									fw = img.naturalWidth;
+									fh = img.naturalHeight;
+								}
+							}
+						}
+
+						if (fw && fh) {
+							const [constrainedW, constrainedH] = applyConstraints(fw, fh);
+							widthWidget.value = constrainedW;
+							heightWidget.value = constrainedH;
+							refreshUIValues();
+						}
+
 						node.setDirtyCanvas(true, true);
 					},
 				);
