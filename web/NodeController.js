@@ -1048,22 +1048,6 @@ const extendNodePrototype = (nodeType, nodeData) => {
 			this.__DA_isInitializing = false;
 		}, 150);
 	};
-
-	const originalMenu = nodeType.prototype.getExtraMenuOptions;
-	nodeType.prototype.getExtraMenuOptions = function (
-		_graphcanvas,
-		options,
-		...args
-	) {
-		originalMenu?.apply(this, args);
-		const compact = !!this.properties?._DA_compactMode;
-		options.push({
-			content: compact
-				? "🚦DA_NodeController: Full mode"
-				: "🚦DA_NodeController: Compact mode",
-			callback: () => this.__DA_toggleCompactMode?.(!compact),
-		});
-	};
 };
 
 app.registerExtension({
@@ -1072,6 +1056,38 @@ app.registerExtension({
 		if (nodeData?.name !== "DA_NodeController") return;
 		extendNodePrototype(nodeType, nodeData);
 	},
+	
+	// Add this method to support the new menu API
+	getNodeMenuItems(node) {
+		// Check the node type so as not to apply to other nodes
+		if (node?.type !== "DA_NodeController") return [];
+		
+		// Get the current state of compact mode
+		// In the old version it is stored in node.properties._DA_compactMode
+		const isCompact = !!node.properties?._DA_compactMode;
+		
+		return [
+			{
+				content: isCompact 
+					? "🚦 DA_NodeController: Full mode" 
+					: "🚦 DA_NodeController: Compact mode",
+				callback: () => {
+					// Call the existing switch method, if there is one
+					if (node.__DA_toggleCompactMode) {
+						node.__DA_toggleCompactMode(!isCompact);
+					} else {
+						// Fallback if the method is suddenly not defined (unlikely, but for safety)
+						node.properties = node.properties || {};
+						node.properties._DA_compactMode = !isCompact;
+						node.__DA_refreshWidgets?.();
+						node.__DA_updateAutoHeight?.();
+						node.setDirtyCanvas?.(true, true);
+					}
+				},
+			},
+		];
+	},
+	
 	async loadedGraph() {
 		// Automatic treatment when switching tabs/graphs (if the load/focus hook is triggered)
 		setTimeout(() => {

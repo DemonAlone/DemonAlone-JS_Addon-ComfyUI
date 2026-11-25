@@ -1000,22 +1000,6 @@ const extendNodePrototype = (nodeType, nodeData) => {
 		}
 		setTimeout(() => this.__DG_refreshWidgets?.(), 0);
 	};
-
-	const originalMenu = nodeType.prototype.getExtraMenuOptions;
-	nodeType.prototype.getExtraMenuOptions = function (
-		_graphcanvas,
-		options,
-		...args
-	) {
-		originalMenu?.apply(this, args);
-		const compact = !!this.properties?._DG_compactMode;
-		options.push({
-			content: compact
-				? "🚦DA_GroupController: Full mode"
-				: "🚦DA_GroupController: Compact mode",
-			callback: () => this.__DG_toggleCompactMode?.(!compact, { force: true }),
-		});
-	};
 };
 
 app.registerExtension({
@@ -1023,5 +1007,35 @@ app.registerExtension({
 	async beforeRegisterNodeDef(nodeType, nodeData) {
 		if (nodeData?.name !== "DA_GroupController") return;
 		extendNodePrototype(nodeType, nodeData);
+	},
+	
+	// ДAdd this method to support the new menu API
+	getNodeMenuItems(node) {
+		// Check the node type
+		if (node?.type !== "DA_GroupController") return [];
+		
+		// Get the current state of compact mode
+		const isCompact = !!node.properties?._DG_compactMode;
+		
+		return [
+			{
+				content: isCompact 
+					? "🚦 DA_GroupController: Full mode" 
+					: "🚦 DA_GroupController: Compact mode",
+				callback: () => {
+					// Call the existing switch method, if there is one
+					if (node.__DG_toggleCompactMode) {
+						node.__DG_toggleCompactMode(!isCompact, { force: true });
+					} else {
+						// Fallback if the method is suddenly not defined 
+						node.properties = node.properties || {};
+						node.properties._DG_compactMode = !isCompact;
+						node.__DG_refreshWidgets?.();
+						node.__DG_updateAutoHeight?.();
+						node.setDirtyCanvas?.(true, true);
+					}
+				},
+			},
+		];
 	},
 });
