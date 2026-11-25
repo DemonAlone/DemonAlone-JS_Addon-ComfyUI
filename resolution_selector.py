@@ -29,7 +29,7 @@ class DA_ResolutionSelector:
                 "step_size": ([str(x) for x in s.STEPS_LIST], {"default": "16", "tooltip": "Divisor to snap dimensions to a multiple of this value (e.g., 16)."}),
                 "resolution_preset": (s.RESOLUTION_PRESETS, {"default": "Custom / None", "tooltip": "Quick base resolution preset."}),
                 "scale_mult": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 4.0, "step": 0.1, "tooltip": "Uniform multiplier applied directly to width and height."}),
-                "scale_mp": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 16.0, "step": 0.1, "tooltip": "Target megapixel count."}),
+                "scale_mp": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 20.0, "step": 0.1, "tooltip": "Target megapixel count."}),
                 "align_to_step": ("BOOLEAN", {"default": False, "tooltip": "If True, snaps dimensions to step_size."}),
             },
             "optional": {
