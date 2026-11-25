@@ -1,3 +1,7 @@
+## 3.6.2
+- GroupController and NodeController menu hot fix.
+- increased Target megapixel count for ResolutionSelector.
+
 ## 3.5.7
 - Read Image Resolution function fix for DA_ResolutionSelector. 
 
