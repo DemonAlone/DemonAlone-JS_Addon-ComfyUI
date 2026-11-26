@@ -1,5 +1,8 @@
+from . import video_routes  # noqa: F401
 from .civitai_save import DA_SaveImage
 from .da_anyswitch import DA_AnySwitch
+from .da_group_controller_v2 import DA_GroupController_V2
+from .da_node_controller_v2 import DA_NodeController_V2
 from .dynamic_slider_node import DA_DynamicSliderNode
 from .group_controller import DA_GroupController
 from .image_comparer import DA_ImageComparer
@@ -13,11 +16,12 @@ from .preset_int import PresetIntNode
 from .prompt_formatter import DA_PromptFormatter
 from .resolution_selector import DA_ResolutionSelector
 from .video_maker_v2 import VideoMakerV2
-from . import video_routes  # noqa: F401
 
 NODE_CLASS_MAPPINGS = {
     "DA_AnySwitch": DA_AnySwitch,
     "DA_DynamicSliderNode": DA_DynamicSliderNode,
+    "DA_NodeController_V2": DA_NodeController_V2,
+    "DA_GroupController_V2": DA_GroupController_V2,
     "DA_ImageComparer": DA_ImageComparer,
     "DA_GroupController": DA_GroupController,
     "DA_NodeController": DA_NodeController,
@@ -37,8 +41,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DA_AnySwitch": "DA_AnySwitch",
     "DA_DynamicSliderNode": "Dynamic Slider",
     "DA_ImageComparer": "Image Comparer",
-    "DA_GroupController": "DA_GroupController [BETA]",
-    "DA_NodeController": "DA_NodeController [BETA]",
+    "DA_NodeController_V2": "DA_NodeController_V2 [BETA]",
+    "DA_GroupController_V2": "DA_GroupController_V2 [BETA]",
+    "DA_GroupController": "DA_GroupController [DEPRECATED]",
+    "DA_NodeController": "DA_NodeController [DEPRECATED]",
     "DA_PlaySound": "DA_PlaySound",
     "DA_PromptFormatter": "Prompt Formatter",
     "DA_ResolutionSelector": "Resolution Selector [BETA]",
