@@ -97,13 +97,15 @@ const flushInputsToConfig = (node) => {
 	if (!node || !Array.isArray(node.widgets)) return;
 	const cfg = ensureConfig(node);
 	for (const w of node.widgets) {
-		if (!w || !w.name) continue;
+		if (!w?.name) continue;
 		if (w.name.startsWith("label_")) {
 			const idx = Number(w.name.slice(6)) - 1;
-			if (idx >= 0 && idx < MAX_SLOTS) cfg.slots[idx].label = String(w.value ?? "");
+			if (idx >= 0 && idx < MAX_SLOTS)
+				cfg.slots[idx].label = String(w.value ?? "");
 		} else if (w.name.startsWith("targets_")) {
 			const idx = Number(w.name.slice(8)) - 1;
-			if (idx >= 0 && idx < MAX_SLOTS) cfg.slots[idx].targets = String(w.value ?? "");
+			if (idx >= 0 && idx < MAX_SLOTS)
+				cfg.slots[idx].targets = String(w.value ?? "");
 		}
 	}
 };
@@ -433,7 +435,12 @@ const getBaseHeight = (node) => {
 
 const captureCurrentSize = (node) => {
 	if (!node || node.__DG_internalResize || node.__DG_configuring) return;
-	if (!node.size || typeof node.size.length !== "number" || node.size.length < 2) return;
+	if (
+		!node.size ||
+		typeof node.size.length !== "number" ||
+		node.size.length < 2
+	)
+		return;
 
 	const rawW = Number(node.size.at(0));
 	const rawH = Number(node.size.at(1));
@@ -477,7 +484,7 @@ const rebuildWidgets = (node) => {
 	const offLabel = OFF_LABELS[cfg.mode] || OFF_LABELS.Bypass;
 	const onLabel = ON_LABELS[cfg.mode] || "Active 🟢";
 
-// If in always one mode no slot is active, turn on the first one
+	// If in always one mode no slot is active, turn on the first one
 	if (cfg.toggleRestriction === "always one") {
 		const anyOn = cfg.slots.slice(0, cfg.slotCount).some((s) => s.active);
 		if (!anyOn && cfg.slotCount > 0) cfg.slots.active = true;
@@ -518,7 +525,13 @@ const rebuildWidgets = (node) => {
 				rebuildWidgets(node);
 				applyStateToGraph(node);
 			},
-			{ min: 1, max: MAX_SLOTS, step: 10, precision: 0, default: cfg.slotCount },
+			{
+				min: 1,
+				max: MAX_SLOTS,
+				step: 10,
+				precision: 0,
+				default: cfg.slotCount,
+			},
 		);
 		countW.value = cfg.slotCount;
 
@@ -706,7 +719,7 @@ app.registerExtension({
 			this.serialize_widgets = false;
 			if (savedJson) restoreStorage(this, savedJson);
 			else restoreStorage(this);
-			if (info && info.size && typeof info.size.length === "number") {
+			if (info?.size && typeof info.size.length === "number") {
 				const w = Number(info.size.at(0));
 				if (Number.isFinite(w) && w >= 220) {
 					ensureConfig(this).savedWidth = Math.round(w);

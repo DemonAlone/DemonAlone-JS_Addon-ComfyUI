@@ -96,7 +96,7 @@ const flushInputsToConfig = (node) => {
 	if (!node || !Array.isArray(node.widgets)) return;
 	const cfg = ensureConfig(node);
 	for (const w of node.widgets) {
-		if (!w || !w.name) continue;
+		if (!w?.name) continue;
 		if (w.name.startsWith("label_")) {
 			const idx = Number(w.name.slice(6)) - 1;
 			if (idx >= 0 && idx < MAX_SLOTS)
@@ -452,12 +452,12 @@ const rebuildWidgets = (node) => {
 	const offLabel = OFF_LABELS[cfg.mode] || OFF_LABELS.Bypass;
 	const onLabel = ON_LABELS[cfg.mode] || "Active 🟢";
 
-// If in always one mode no slot is active, turn on the first one
+	// If in always one mode no slot is active, turn on the first one
 	if (cfg.toggleRestriction === "always one") {
 		const anyOn = cfg.slots.slice(0, cfg.slotCount).some((s) => s.active);
 		if (!anyOn && cfg.slotCount > 0) cfg.slots.active = true;
 	}
-// Clear the array without losing the reference to the array object itself (important for Vue reactivity)
+	// Clear the array without losing the reference to the array object itself (important for Vue reactivity)
 	if (Array.isArray(node.widgets)) {
 		node.widgets.length = 0;
 	} else {
@@ -710,7 +710,7 @@ app.registerExtension({
 			if (savedJson) restoreStorage(this, savedJson);
 			else restoreStorage(this);
 
-			if (info && info.size && typeof info.size.length === "number") {
+			if (info?.size && typeof info.size.length === "number") {
 				const w = Number(info.size.at(0));
 				if (Number.isFinite(w) && w >= 220) {
 					ensureConfig(this).savedWidth = Math.round(w);
