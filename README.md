@@ -6,11 +6,12 @@ These nodes are implemented in JavaScript to ensure a highly responsive interfac
 * **DA_Playsound** is based on **PlaySound 🐍** from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts).
 
 * **PresetFloatNode**, **PresetIntNode** and **DA_DynamicSlider** are based on **Power Primitive** from [rgthree-comfy](https://github.com/rgthree/rgthree-comfy). 
-	**PresetFloatNode**, **PresetIntNode** are **deprecated** and **will be deleted** in the future version of the extension. Use the **DA_DynamicSlider** node instead.
+	**PresetFloatNode**, **PresetIntNode** are **deprecated** and **will be deleted** in the **v4.0.0** of the extension. Use the **DA_DynamicSlider** node instead.
 
 * **DA_PromptFormatter** inspired but **not** based on **Prompt Formatter (Only Text)** [comfyui_prompt_formatter](https://github.com/younyokel/comfyui_prompt_formatter).
 
-* **DA_NodeController** and **DA_GroupController** are based on **AUNMultiUniversal** from [AUN-ComfyUI-Nodes](https://github.com/loz2754/AUN-ComfyUI-Nodes). **DA_GroupController** has some features from feature_group_fast_toggle.js by **rgthree**.
+* **DA_NodeController**, **DA_GroupController**, **DA_NodeController_V2** and **DA_GroupController_V2** are based on **AUNMultiUniversal** from [AUN-ComfyUI-Nodes](https://github.com/loz2754/AUN-ComfyUI-Nodes). 
+    **DA_GroupController** has some features from feature_group_fast_toggle.js by **rgthree**. **DA_NodeController** and **DA_GroupController** are **deprecated** and **will be deleted** in **v5.0.0**
 
 * Used the hint from [ComfyUI-MyLoadVideo](https://github.com/1123156819/comfyui-myloadvideo) for getting a list of video previews for  **load_video_nodes2**.
 

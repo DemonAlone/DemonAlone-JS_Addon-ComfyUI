@@ -68,7 +68,7 @@ async def get_video_metadata(request):
 
         container.close()
         return web.json_response({"fps": fps, "frame_count": frame_count})
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception("Failed to read video metadata")
         return web.json_response({"error": "Failed to read video metadata"}, status=500)
 

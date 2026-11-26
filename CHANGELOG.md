@@ -1,3 +1,7 @@
+## 3.8.0
+- Added DA_GroupController_V2 and DA_NodeController_V2.
+- Some minor fixes.
+
 ## 3.6.2
 - GroupController and NodeController menu hot fix.
 - increased Target megapixel count for ResolutionSelector.
